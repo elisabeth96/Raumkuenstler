@@ -2,6 +2,10 @@
 
 #include <polyscope/point_cloud.h>
 #include <polyscope/surface_mesh.h>
+#include "probabilistic-quadrics.hh"
+
+using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
+using quadric = pq::quadric<glm_trait>;
 
 namespace ps = polyscope;
 
@@ -16,14 +20,18 @@ double torus(glm::dvec3 p) {
     return sqrt(x * x + p.y * p.y) - r2;
 }
 
-double box( glm::dvec3 p, glm::dvec3 b )
-{
+double box(glm::dvec3 p, glm::dvec3 b) {
     glm::dvec3 q = abs(p) - b;
-    return glm::length(max(q,0.0)) + std::min(std::max(q.x,std::max(q.y,q.z)),0.0);
+    return glm::length(max(q, 0.0)) + std::min(std::max(q.x, std::max(q.y, q.z)), 0.0);
 }
 
 double combine(double d1, double d2) {
     return std::min(d1, d2);
+}
+
+double opSmoothUnion(double d1, double d2, double k) {
+    double h = glm::clamp(0.5 + 0.5 * (d2 - d1) / k, 0.0, 1.0);
+    return glm::mix(d2, d1, h) - k * h * (1.0 - h);
 }
 
 struct Edge {
@@ -39,6 +47,14 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
 
     auto index_to_grid_point = [=](glm::dvec3 index) {
         return lower + index / (n - 1.0) * (upper - lower);
+    };
+
+    auto gradient_f = [=](glm::dvec3 p) -> glm::dvec3 {
+        double eps = 10e-5;
+        double dx = (f({p.x + eps, p.y, p.z}) - f({p.x - eps, p.y, p.z})) / (2 * eps);
+        double dy = (f({p.x, p.y + eps, p.z}) - f({p.x, p.y - eps, p.z})) / (2 * eps);
+        double dz = (f({p.x, p.y, p.z + eps}) - f({p.x, p.y, p.z - eps})) / (2 * eps);
+        return {dx, dy, dz};
     };
 
     std::vector<double> grid(n * n * n);
@@ -76,7 +92,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
     for (int i = 0; i < n - 1; i++) {
         for (int j = 0; j < n - 1; j++) {
             for (int k = 0; k < n - 1; k++) {
-                glm::dvec3 center_p = {0, 0, 0};
+                quadric q = {0};
                 int counter = 0;
                 for (auto e: all_edges) {
                     glm::ivec3 index_p1 = {i + e.first.x, j + e.first.y, k + e.first.z};
@@ -86,12 +102,15 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
                     if (v1 * v2 <= 0) {
                         glm::dvec3 p1 = index_to_grid_point(index_p1);
                         glm::dvec3 p2 = index_to_grid_point(index_p2);
-                        center_p += p1 + v1 / (v1 - v2) * (p2 - p1);
+                        glm::dvec3 zero_crossing = p1 + v1 / (v1 - v2) * (p2 - p1);
                         counter++;
+                        q += quadric::probabilistic_plane_quadric(zero_crossing,
+                                                                  glm::normalize(gradient_f(zero_crossing)), 0.05,
+                                                                  0.05);
                     }
                 }
                 if (counter != 0) {
-                    points.push_back(center_p / (double) counter);
+                    points.push_back(q.minimizer());
                     index_points[i * n * n + j * n + k] = (int) points.size() - 1;
                 }
             }
@@ -146,7 +165,7 @@ void callback() {
         return combine(sphere(v, 0.25, moving_center), torus(v));
     }, 100);*/
     auto mesh_box = mesh_generator([=](glm::dvec3 v) {
-        return combine(box(v-moving_center, {0.2,0.2,0.2}), torus(v));
+        return opSmoothUnion(box(v - moving_center, {0.2, 0.2, 0.2}), torus(v), 0.07);
     }, 100);
     ps::registerSurfaceMesh("my mesh box", mesh_box.first, mesh_box.second);
 }
