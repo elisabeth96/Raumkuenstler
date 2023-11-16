@@ -13,3 +13,5 @@ FetchContent_MakeAvailable(polyscope)
 
 add_executable(implicit_meshing main.cpp)
 target_link_libraries(implicit_meshing PRIVATE polyscope)
+
+target_compile_options(implicit_meshing PRIVATE -march=native)

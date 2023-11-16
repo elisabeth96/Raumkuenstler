@@ -181,7 +181,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         }
         glm::ivec3 center_index = (cell.second + cell.first) / 2;
         double v = f(index_to_grid_point(center_index));
-        if (abs(v) > std::max(glm::length(index_to_grid_point(cell.second) - index_to_grid_point(center_index)),
+        if (abs(v) > 1.5*std::max(glm::length(index_to_grid_point(cell.second) - index_to_grid_point(center_index)),
                               glm::length(index_to_grid_point(cell.first) - index_to_grid_point(center_index)))) {
             continue;
         }
@@ -215,7 +215,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
     for (const auto& element : grid) {
         glm::ivec3 index = element.first;
         double v = element.second;
-        quadric q = {0};
+        quadric q;
         int counter = 0;
         for (auto e: all_edges) {
             glm::ivec3 index_p1 = index + e.first;
