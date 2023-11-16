@@ -6,6 +6,7 @@
 #include <polyscope/curve_network.h>
 
 #include "probabilistic-quadrics.hh"
+#include "hash_table7.hpp"
 
 using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
 using quadric = pq::quadric<glm_trait>;
@@ -158,7 +159,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
     std::vector<GridCell> grid_cells;
     grid_cells.push_back({{0, 0, 0},
                           {n, n, n}});
-    std::unordered_map<glm::ivec3, double, GridHash> grid;
+    emhash7::HashMap<glm::ivec3, double, GridHash> grid;
 
     while (!grid_cells.empty()) {
         GridCell cell = grid_cells.back();
@@ -211,7 +212,9 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
 
     std::vector<int> index_points(n * n * n, -1);
 
-    for (auto [index, v]: grid) {
+    for (const auto& element : grid) {
+        glm::ivec3 index = element.first;
+        double v = element.second;
         quadric q = {0};
         int counter = 0;
         for (auto e: all_edges) {
@@ -238,7 +241,9 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         }
     }
 
-    for (auto [index, v]: grid) {
+    for (const auto& element: grid) {
+        glm::ivec3 index = element.first;
+        double v = element.second;
         int i = index.x;
         int j = index.y;
         int k = index.z;
