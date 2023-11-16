@@ -220,11 +220,13 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         for (auto e: all_edges) {
             glm::ivec3 index_p1 = index + e.first;
             glm::ivec3 index_p2 = index + e.second;
-            if (grid.count(index_p1) == 0 || grid.count(index_p2) == 0) {
+            auto it1 = grid.find(index_p1);
+            auto it2 = grid.find(index_p2);
+            if (it1 == grid.end() || it2 == grid.end()) {
                 continue;
             }
-            double v1 = grid[index_p1];
-            double v2 = grid[index_p2];
+            double v1 = it1->second;
+            double v2 = it2->second;
             if (v1 * v2 <= 0) {
                 glm::dvec3 p1 = index_to_grid_point(index_p1);
                 glm::dvec3 p2 = index_to_grid_point(index_p2);
@@ -254,11 +256,13 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         for (auto e: edges) {
             glm::ivec3 index_p1 = index + e.a;
             glm::ivec3 index_p2 = index + e.b;
-            if (grid.count(index_p1) == 0 || grid.count(index_p2) == 0) {
+            auto it1 = grid.find(index_p1);
+            auto it2 = grid.find(index_p2);
+            if (it1 == grid.end() || it2 == grid.end()) {
                 continue;
             }
-            double v1 = grid[index_p1];
-            double v2 = grid[index_p2];
+            double v1 = it1->second;
+            double v2 = it2->second;
             if (v1 * v2 <= 0) {
                 std::array<int, 4> face{};
                 if (e.idx == 0) {
@@ -297,8 +301,8 @@ void callback() {
     }, 100);*/
     auto start = std::chrono::high_resolution_clock::now();
     auto mesh_box = mesh_generator([=](glm::dvec3 v) {
-        return opSmoothUnion(box(v - moving_center, {0.2, 0.2, 0.2}), torus(v), 0.07);
-    }, 100);
+        return opSmoothUnion(box(v - moving_center, {0.2, 0.2, 0.2}), torus(v), 0.3);
+    }, 200);
     auto end = std::chrono::high_resolution_clock::now();
     // print time in ms
     printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
