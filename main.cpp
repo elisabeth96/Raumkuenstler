@@ -1,5 +1,6 @@
 #include <iostream>
 #include <chrono>
+#include <memory>
 
 #include <polyscope/point_cloud.h>
 #include <polyscope/surface_mesh.h>
@@ -7,6 +8,7 @@
 
 #include "probabilistic-quadrics.hh"
 #include "hash_table7.hpp"
+#include "imnodes.h"
 
 using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
 using quadric = pq::quadric<glm_trait>;
@@ -181,8 +183,8 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         }
         glm::ivec3 center_index = (cell.second + cell.first) / 2;
         double v = f(index_to_grid_point(center_index));
-        if (abs(v) > 1.5*std::max(glm::length(index_to_grid_point(cell.second) - index_to_grid_point(center_index)),
-                              glm::length(index_to_grid_point(cell.first) - index_to_grid_point(center_index)))) {
+        if (abs(v) > 1.5 * std::max(glm::length(index_to_grid_point(cell.second) - index_to_grid_point(center_index)),
+                                    glm::length(index_to_grid_point(cell.first) - index_to_grid_point(center_index)))) {
             continue;
         }
         generate_children(grid_cells, cell);
@@ -212,7 +214,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
 
     std::vector<int> index_points(n * n * n, -1);
 
-    for (const auto& element : grid) {
+    for (const auto &element: grid) {
         glm::ivec3 index = element.first;
         double v = element.second;
         quadric q;
@@ -243,7 +245,7 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
         }
     }
 
-    for (const auto& element: grid) {
+    for (const auto &element: grid) {
         glm::ivec3 index = element.first;
         double v = element.second;
         int i = index.x;
@@ -293,12 +295,161 @@ mesh_generator(std::function<double(glm::dvec3)> f, int n = 50) {
     return {points, faces};
 }
 
-void callback() {
+struct Editor;
+
+class Node {
+public:
+    Node(Editor *editor, int num_inputs, int num_outputs);
+
+    int node_id;
+    std::vector<int> input_attr_ids;
+    std::vector<int> output_attr_ids;
+
+    virtual void draw() = 0;
+};
+
+class OutputNode : public Node {
+public:
+    OutputNode(Editor *editor) : Node(editor, 1, 0) {}
+
+    void draw() override {
+        ImGui::PushItemWidth(120);
+        ImNodes::BeginNode(node_id);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Output");
+        ImNodes::EndNodeTitleBar();
+        ImGui::Dummy(ImVec2(120.0f, 0.0f));
+
+        assert(input_attr_ids.size() == 1);
+        ImNodes::BeginInputAttribute(input_attr_ids[0]);
+        ImNodes::EndInputAttribute();
+
+        assert(output_attr_ids.size() == 0);
+
+        ImNodes::EndNode();
+        ImGui::PopItemWidth();
+    };
+};
+
+class Editor {
+public:
+    // contains nodes and connections between them
+
+    std::vector<std::unique_ptr<Node>> nodes;
+    std::vector<std::pair<int, int>> links;
+    OutputNode output = OutputNode(this);
+    int current_id = 2;
+
+    void draw() {
+        ImNodes::BeginNodeEditor();
+        output.draw();
+        for (auto &node: nodes) {
+            node->draw();
+        }
+        for (int i = 0; i < links.size(); ++i) {
+            ImNodes::Link(i, links[i].first, links[i].second);
+        }
+        ImNodes::EndNodeEditor();
+    }
+};
+
+Node::Node(Editor *editor, int num_inputs, int num_outputs) {
+    node_id = editor->current_id++;
+    for (int i = 0; i < num_inputs; ++i) {
+        input_attr_ids.push_back(editor->current_id++);
+    }
+    for (int i = 0; i < num_outputs; ++i) {
+        output_attr_ids.push_back(editor->current_id++);
+    }
+}
+
+class SphereNode : public Node {
+public:
+    SphereNode(Editor *editor) : Node(editor, 2, 1) {}
+
+    void draw() override {
+        ImGui::PushItemWidth(120);
+        ImNodes::BeginNode(node_id);
+
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Sphere");
+        ImNodes::EndNodeTitleBar();
+
+        ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+        assert(input_attr_ids.size() == 2);
+        ImNodes::BeginInputAttribute(input_attr_ids[0]);
+        ImGui::Text("center");
+        ImNodes::EndInputAttribute();
+
+        ImNodes::BeginInputAttribute(input_attr_ids[1]);
+        ImGui::Text("radius");
+        ImNodes::EndInputAttribute();
+
+        assert(output_attr_ids.size() == 1);
+        ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+        ImNodes::EndOutputAttribute();
+        ImNodes::EndNode();
+        ImGui::PopItemWidth();
+    }
+};
+
+class ScalarNode : public Node {
+public:
+    float value = 0;
+
+    ScalarNode(Editor *editor) : Node(editor, 0, 1) {}
+
+    void draw() override {
+        ImGui::PushItemWidth(120);
+        ImNodes::BeginNode(node_id);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Scalar");
+        ImNodes::EndNodeTitleBar();
+        //ImGui::Dummy(ImVec2(80.0f, 45.0f));
+
+        assert(input_attr_ids.size() == 0);
+        ImGui::SliderFloat("value", &value, -10, 10);
+
+        assert(output_attr_ids.size() == 1);
+        ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+        ImNodes::EndOutputAttribute();
+        ImNodes::EndNode();
+        ImGui::PopItemWidth();
+    }
+};
+
+class PointNode : public Node {
+public:
+    glm::vec3 value = {0, 0, 0};
+
+    PointNode(Editor *editor) : Node(editor, 0, 1) {}
+
+    void draw() override {
+        ImGui::PushItemWidth(240);
+        ImNodes::BeginNode(node_id);
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted("Point");
+        ImNodes::EndNodeTitleBar();
+        //ImGui::Dummy(ImVec2(80.0f, 45.0f));
+
+        assert(input_attr_ids.size() == 0);
+        ImGui::SliderFloat3("coordinate", &value[0], -10, 10);
+
+        assert(output_attr_ids.size() == 1);
+        ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+        ImNodes::EndOutputAttribute();
+        ImNodes::EndNode();
+        ImGui::PopItemWidth();
+    }
+};
+
+void callback() {/*
+
     double t = ImGui::GetTime();
     glm::dvec3 moving_center = 0.85 * glm::dvec3{std::cos(t), 0, std::sin(t)};
-    /*auto mesh_circle = mesh_generator([=](glm::dvec3 v) {
-        return combine(sphere(v, 0.25, moving_center), torus(v));
-    }, 100);*/
+    //auto mesh_circle = mesh_generator([=](glm::dvec3 v) {
+    //    return combine(sphere(v, 0.25, moving_center), torus(v));
+    //}, 100);
     auto start = std::chrono::high_resolution_clock::now();
     auto mesh_box = mesh_generator([=](glm::dvec3 v) {
         return opSmoothUnion(box(v - moving_center, {0.2, 0.2, 0.2}), torus(v), 0.3);
@@ -307,12 +458,53 @@ void callback() {
     // print time in ms
     printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
     ps::registerSurfaceMesh("my mesh box", mesh_box.first, mesh_box.second);
+    */
+
+    static Editor editor;
+
+    static int selectedNode = -1;
+    ImGui::PushItemWidth(120);
+    if (ImGui::BeginCombo("##combo", "Add Node")) {
+        if (ImGui::Selectable("Sphere", selectedNode == 0)) {
+            selectedNode = 0;
+            editor.nodes.push_back(
+                    std::make_unique<SphereNode>(&editor));
+        }
+        if (ImGui::Selectable("Scalar", selectedNode == 1)) {
+            selectedNode = 1;
+            editor.nodes.push_back(std::make_unique<ScalarNode>(&editor));
+        }
+        if (ImGui::Selectable("Point", selectedNode == 2)) {
+            selectedNode = 2;
+            editor.nodes.push_back(std::make_unique<PointNode>(&editor));
+        }
+
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
+
+    editor.draw();
+    int start_attr, end_attr;
+    if (ImNodes::IsLinkCreated(&start_attr, &end_attr)) {
+        if (start_attr == end_attr) {
+            return;
+        }
+        auto it = std::find_if(editor.links.begin(), editor.links.end(), [=](auto pair) {
+            return pair.second == end_attr;
+        });
+        if (it != editor.links.end()) {
+            editor.links.erase(it);
+        }
+        editor.links.emplace_back(start_attr, end_attr);
+    }
 }
 
 
 int main() {
+    ps::options::buildGui = false;
 
     ps::init();
+    ImNodes::CreateContext();
 
 
     ps::state::userCallback = callback;
@@ -323,6 +515,7 @@ int main() {
     ps::registerSurfaceMesh("my mesh box", mesh_circle.first, mesh_circle.second);*/
 
     ps::show();
+    ImNodes::DestroyContext();
 
     return 0;
 }
