@@ -11,7 +11,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(polyscope)
 
-add_executable(implicit_meshing main.cpp imnodes.cpp)
+add_executable(implicit_meshing main.cpp imnodes.cpp
+        implicit_meshing.cpp
+        implicit_meshing.h
+        node.cpp
+        node.h
+        editor.cpp
+        editor.h)
 target_link_libraries(implicit_meshing PRIVATE polyscope)
 
 target_compile_options(implicit_meshing PRIVATE -march=native)
