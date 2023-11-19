@@ -7,7 +7,10 @@
 #include "imnodes.h"
 #include "editor.h"
 
+#include <glm/glm.hpp>
+
 Node::Node(Editor *editor, int num_inputs, int num_outputs) {
+    this->editor = editor;
     node_id = editor->current_id++;
     for (int i = 0; i < num_inputs; ++i) {
         input_attr_ids.push_back(editor->current_id++);
@@ -35,6 +38,11 @@ void OutputNode::draw() {
     ImGui::PopItemWidth();
 }
 
+glm::dvec3 OutputNode::evaluate(glm::dvec3 p) {
+    Node *node = editor->find_node(input_attr_ids[0]);
+    return node->evaluate(p);
+}
+
 void SphereNode::draw() {
     ImGui::PushItemWidth(120);
     ImNodes::BeginNode(node_id);
@@ -60,6 +68,12 @@ void SphereNode::draw() {
     ImGui::PopItemWidth();
 }
 
+glm::dvec3 SphereNode::evaluate(glm::dvec3 p) {
+    Node *node_center = editor->find_node(input_attr_ids[0]);
+    Node *node_radius = editor->find_node(input_attr_ids[1]);
+    return {glm::distance(p, node_center->evaluate(p)) - node_radius->evaluate(p).x, 0, 0};
+}
+
 void ScalarNode::draw() {
     ImGui::PushItemWidth(120);
     ImNodes::BeginNode(node_id);
@@ -78,6 +92,10 @@ void ScalarNode::draw() {
     ImGui::PopItemWidth();
 }
 
+glm::dvec3 ScalarNode::evaluate(glm::dvec3 p) {
+    return {value, 0, 0};
+}
+
 void PointNode::draw() {
     ImGui::PushItemWidth(240);
     ImNodes::BeginNode(node_id);
@@ -94,4 +112,8 @@ void PointNode::draw() {
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();
+}
+
+glm::dvec3 PointNode::evaluate(glm::dvec3 p) {
+    return value;
 }

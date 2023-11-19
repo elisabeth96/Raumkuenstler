@@ -56,41 +56,23 @@ void callback() {/*
     */
 
     static Editor editor;
-
-    static int selectedNode = -1;
-    ImGui::PushItemWidth(120);
-    if (ImGui::BeginCombo("##combo", "Add Node")) {
-        if (ImGui::Selectable("Sphere", selectedNode == 0)) {
-            selectedNode = 0;
-            editor.nodes.push_back(
-                    std::make_unique<SphereNode>(&editor));
-        }
-        if (ImGui::Selectable("Scalar", selectedNode == 1)) {
-            selectedNode = 1;
-            editor.nodes.push_back(std::make_unique<ScalarNode>(&editor));
-        }
-        if (ImGui::Selectable("Point", selectedNode == 2)) {
-            selectedNode = 2;
-            editor.nodes.push_back(std::make_unique<PointNode>(&editor));
-        }
-
-        ImGui::EndCombo();
-    }
-    ImGui::PopItemWidth();
-
+    editor.draw_node_dropdown();
     editor.draw();
-    int start_attr, end_attr;
-    if (ImNodes::IsLinkCreated(&start_attr, &end_attr)) {
-        if (start_attr == end_attr) {
-            return;
+    editor.handle_links();
+
+    // compute the mesh if there is a link to the output node
+    for (int i = 0; i < editor.links.size(); ++i) {
+        if (editor.links[i].second == editor.output.input_attr_ids[0]) {
+            auto start = std::chrono::high_resolution_clock::now();
+            auto mesh = mesh_generator([=](glm::dvec3 p) {
+                return editor.output.evaluate(p).x;
+            }, 200);
+            auto end = std::chrono::high_resolution_clock::now();
+            // print time in ms
+            printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+            ps::registerSurfaceMesh("my mesh", mesh.vertices, mesh.quads);
+            break;
         }
-        auto it = std::find_if(editor.links.begin(), editor.links.end(), [=](auto pair) {
-            return pair.second == end_attr;
-        });
-        if (it != editor.links.end()) {
-            editor.links.erase(it);
-        }
-        editor.links.emplace_back(start_attr, end_attr);
     }
 }
 

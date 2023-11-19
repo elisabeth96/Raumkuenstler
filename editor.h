@@ -18,5 +18,8 @@ public:
     int current_id = 2;
 
     void draw();
+    void handle_links();
+    void draw_node_dropdown();
+    Node* find_node(int id);
 };
 
