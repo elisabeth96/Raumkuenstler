@@ -39,6 +39,22 @@ public:
     glm::dvec3 evaluate(glm::dvec3 p) override;
 };
 
+class TorusNode : public Node {
+public:
+    TorusNode(Editor *editor) : Node(editor, 2, 1) {}
+
+    void draw() override;
+    glm::dvec3 evaluate(glm::dvec3 p) override;
+};
+
+class BoxNode : public Node {
+public:
+    BoxNode(Editor *editor) : Node(editor, 1, 1) {}
+
+    void draw() override;
+    glm::dvec3 evaluate(glm::dvec3 p) override;
+};
+
 class ScalarNode : public Node {
 public:
     float value = 0;

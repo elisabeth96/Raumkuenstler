@@ -50,6 +50,14 @@ void Editor::draw_node_dropdown() {
             selectedNode = 2;
             nodes.push_back(std::make_unique<PointNode>(this));
         }
+        if (ImGui::Selectable("Torus", selectedNode == 3)) {
+            selectedNode = 3;
+            nodes.push_back(std::make_unique<TorusNode>(this));
+        }
+        if (ImGui::Selectable("Box", selectedNode == 4)) {
+            selectedNode = 4;
+            nodes.push_back(std::make_unique<BoxNode>(this));
+        }
 
         ImGui::EndCombo();
     }
