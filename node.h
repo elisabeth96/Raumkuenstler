@@ -10,12 +10,11 @@ struct Editor;
 
 class Node {
 public:
-    Node(Editor *editor, int num_inputs, int num_outputs);
+    Node(Editor *editor, int node_id, int num_inputs);
 
-    Editor *editor;
-    int node_id;
-    std::vector<int> input_attr_ids;
-    std::vector<int> output_attr_ids;
+    Editor *m_editor;
+    int m_node_id;
+    int m_num_inputs;
 
     virtual void draw() = 0;
 
@@ -24,7 +23,7 @@ public:
 
 class OutputNode : public Node {
 public:
-    OutputNode(Editor *editor) : Node(editor, 1, 0) {}
+    OutputNode(Editor *editor, int node_id) : Node(editor, node_id, 1) {}
 
     void draw() override;
 
@@ -33,7 +32,7 @@ public:
 
 class SphereNode : public Node {
 public:
-    SphereNode(Editor *editor) : Node(editor, 2, 1) {}
+    SphereNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;
@@ -41,7 +40,7 @@ public:
 
 class TorusNode : public Node {
 public:
-    TorusNode(Editor *editor) : Node(editor, 2, 1) {}
+    TorusNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;
@@ -49,7 +48,7 @@ public:
 
 class BoxNode : public Node {
 public:
-    BoxNode(Editor *editor) : Node(editor, 1, 1) {}
+    BoxNode(Editor *editor, int node_id) : Node(editor, node_id, 1) {}
 
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;
@@ -59,7 +58,7 @@ class ScalarNode : public Node {
 public:
     float value = 0;
 
-    ScalarNode(Editor *editor) : Node(editor, 0, 1) {}
+    ScalarNode(Editor *editor, int node_id) : Node(editor, node_id, 0) {}
 
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;
@@ -69,7 +68,7 @@ class PointNode : public Node {
 public:
     glm::vec3 value = {0, 0, 0};
 
-    PointNode(Editor *editor) : Node(editor, 0, 1) {}
+    PointNode(Editor *editor, int node_id) : Node(editor, node_id, 0) {}
 
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;

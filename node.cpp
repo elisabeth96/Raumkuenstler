@@ -9,99 +9,90 @@
 
 #include <glm/glm.hpp>
 
-Node::Node(Editor *editor, int num_inputs, int num_outputs) {
-    this->editor = editor;
-    node_id = editor->current_id++;
-    for (int i = 0; i < num_inputs; ++i) {
-        input_attr_ids.push_back(editor->current_id++);
-    }
-    for (int i = 0; i < num_outputs; ++i) {
-        output_attr_ids.push_back(editor->current_id++);
-    }
+Node::Node(Editor *editor, int node_id, int num_inputs) {
+    this->m_editor = editor;
+    this->m_node_id = node_id;
+    this->m_num_inputs = num_inputs;
 }
 
 void OutputNode::draw() {
     ImGui::PushItemWidth(120);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Output");
     ImNodes::EndNodeTitleBar();
     ImGui::Dummy(ImVec2(120.0f, 0.0f));
 
-    assert(input_attr_ids.size() == 1);
-    ImNodes::BeginInputAttribute(input_attr_ids[0]);
+    assert(m_num_inputs == 1);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImNodes::EndInputAttribute();
-
-    assert(output_attr_ids.size() == 0);
 
     ImNodes::EndNode();
     ImGui::PopItemWidth();
 }
 
 glm::dvec3 OutputNode::evaluate(glm::dvec3 p) {
-    Node *node = editor->find_node(input_attr_ids[0]);
+    Node *node = m_editor->find_node(m_node_id, 0);
     return node->evaluate(p);
 }
 
 void SphereNode::draw() {
     ImGui::PushItemWidth(120);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
 
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Sphere");
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
-    assert(input_attr_ids.size() == 2);
-    ImNodes::BeginInputAttribute(input_attr_ids[0]);
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("center");
     ImNodes::EndInputAttribute();
 
-    ImNodes::BeginInputAttribute(input_attr_ids[1]);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
     ImGui::Text("radius");
     ImNodes::EndInputAttribute();
 
-    assert(output_attr_ids.size() == 1);
-    ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();
 }
 
 glm::dvec3 SphereNode::evaluate(glm::dvec3 p) {
-    Node *node_center = editor->find_node(input_attr_ids[0]);
-    Node *node_radius = editor->find_node(input_attr_ids[1]);
+    Node *node_center = m_editor->find_node(m_node_id, 0);
+    Node *node_radius = m_editor->find_node(m_node_id, 1);
     return {glm::distance(p, node_center->evaluate(p)) - node_radius->evaluate(p).x, 0, 0};
 }
 
 void TorusNode::draw() {
     ImGui::PushItemWidth(120);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
 
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Torus");
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
-    assert(input_attr_ids.size() == 2);
-    ImNodes::BeginInputAttribute(input_attr_ids[0]);
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("major radius");
     ImNodes::EndInputAttribute();
 
-    ImNodes::BeginInputAttribute(input_attr_ids[1]);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
     ImGui::Text("minor radius");
     ImNodes::EndInputAttribute();
 
-    assert(output_attr_ids.size() == 1);
-    ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();
 }
 
 glm::dvec3 TorusNode::evaluate(glm::dvec3 p) {
-    Node *node_radius1 = editor->find_node(input_attr_ids[0]);
-    Node *node_radius2 = editor->find_node(input_attr_ids[1]);
+    Node *node_radius1 = m_editor->find_node(m_node_id, 0);
+    Node *node_radius2 = m_editor->find_node(m_node_id, 1);
     double r1 = node_radius1->evaluate(p).x;
     double r2 = node_radius2->evaluate(p).x;
     double x = sqrt(p.x * p.x + p.z * p.z) - r1;
@@ -110,44 +101,44 @@ glm::dvec3 TorusNode::evaluate(glm::dvec3 p) {
 
 void BoxNode::draw() {
     ImGui::PushItemWidth(120);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
 
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Box");
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
-    assert(input_attr_ids.size() == 1);
-    ImNodes::BeginInputAttribute(input_attr_ids[0]);
+    assert(m_num_inputs == 1);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("Width, Height, Depth");
     ImNodes::EndInputAttribute();
 
-    assert(output_attr_ids.size() == 1);
-    ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();
 }
 
 glm::dvec3 BoxNode::evaluate(glm::dvec3 p) {
-    Node *node_input = editor->find_node(input_attr_ids[0]);
+    Node *node_input = m_editor->find_node(m_node_id, 0);
     glm::dvec3 q = abs(p) - node_input->evaluate(p);
     return {glm::length(max(q, 0.0)) + std::min(std::max(q.x, std::max(q.y, q.z)), 0.0), 0, 0};
 }
 
 void ScalarNode::draw() {
     ImGui::PushItemWidth(120);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Scalar");
     ImNodes::EndNodeTitleBar();
 //ImGui::Dummy(ImVec2(80.0f, 45.0f));
 
-    assert(input_attr_ids.size() == 0);
-    ImGui::InputFloat("value", &value, 0.1f, 1.0f, "%.3f");
+    assert(m_num_inputs == 0);
+    if (ImGui::InputFloat("value", &value, 0.1f, 1.0f, "%.3f")){
+        m_editor->m_remesh = true;
+    }
 
-    assert(output_attr_ids.size() == 1);
-    ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();
@@ -159,17 +150,18 @@ glm::dvec3 ScalarNode::evaluate(glm::dvec3 p) {
 
 void PointNode::draw() {
     ImGui::PushItemWidth(240);
-    ImNodes::BeginNode(node_id);
+    ImNodes::BeginNode(m_node_id);
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Point");
     ImNodes::EndNodeTitleBar();
 //ImGui::Dummy(ImVec2(80.0f, 45.0f));
 
-    assert(input_attr_ids.size() == 0);
-    ImGui::InputFloat3("##", &value[0], "%.3f");
+    assert(m_num_inputs == 0);
+    if (ImGui::InputFloat3("##", &value[0], "%.3f")){
+        m_editor->m_remesh = true;
+    }
 
-    assert(output_attr_ids.size() == 1);
-    ImNodes::BeginOutputAttribute(output_attr_ids[0]);
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
     ImNodes::EndOutputAttribute();
     ImNodes::EndNode();
     ImGui::PopItemWidth();

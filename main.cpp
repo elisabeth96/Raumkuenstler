@@ -60,20 +60,22 @@ void callback() {/*
     editor.draw();
     editor.handle_links();
 
-    // compute the mesh if there is a link to the output node
-    for (int i = 0; i < editor.links.size(); ++i) {
-        if (editor.links[i].second == editor.output.input_attr_ids[0]) {
-            auto start = std::chrono::high_resolution_clock::now();
-            auto mesh = mesh_generator([=](glm::dvec3 p) {
-                return editor.output.evaluate(p).x;
-            }, 200);
-            auto end = std::chrono::high_resolution_clock::now();
-            // print time in ms
-            printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
-            ps::registerSurfaceMesh("my mesh", mesh.vertices, mesh.quads);
-            break;
-        }
+    if (!editor.m_remesh) {
+        return;
     }
+    // compute the mesh if there is a link to the output node
+    if (editor.m_inputs[0][0].first == -1) {
+        return;
+    }
+    auto start = std::chrono::high_resolution_clock::now();
+    auto mesh = mesh_generator([=](glm::dvec3 p) {
+        return editor.m_nodes[0]->evaluate(p).x;
+    }, 200);
+    editor.m_remesh = false;
+    auto end = std::chrono::high_resolution_clock::now();
+    // print time in ms
+    printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    ps::registerSurfaceMesh("my mesh", mesh.vertices, mesh.quads);
 }
 
 

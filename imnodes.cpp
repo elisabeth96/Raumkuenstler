@@ -2516,7 +2516,7 @@ ImVec2 GetNodeDimensions(int node_id)
 {
     ImNodesEditorContext& editor = EditorContextGet();
     const int             node_idx = ObjectPoolFind(editor.Nodes, node_id);
-    IM_ASSERT(node_idx != -1); // invalid node_id
+    IM_ASSERT(node_idx != -1); // invalid m_node_id
     const ImNodeData& node = editor.Nodes.Pool[node_idx];
     return node.Rect.GetSize();
 }
