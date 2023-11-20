@@ -70,6 +70,14 @@ void Editor::draw_node_dropdown() {
             selectedNode = 4;
             add_node<BoxNode>();
         }
+        if (ImGui::Selectable("Union", selectedNode == 5)) {
+            selectedNode = 5;
+            add_node<UnionNode>();
+        }
+        if (ImGui::Selectable("Smooth Union", selectedNode == 6)) {
+            selectedNode = 6;
+            add_node<SmoothUnionNode>();
+        }
 
         ImGui::EndCombo();
     }

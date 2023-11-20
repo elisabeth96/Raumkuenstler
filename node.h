@@ -73,3 +73,19 @@ public:
     void draw() override;
     glm::dvec3 evaluate(glm::dvec3 p) override;
 };
+
+class UnionNode : public Node {
+public:
+    UnionNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
+
+    void draw() override;
+    glm::dvec3 evaluate(glm::dvec3 p) override;
+};
+
+class SmoothUnionNode : public Node {
+public:
+    SmoothUnionNode(Editor *editor, int node_id) : Node(editor, node_id, 3) {}
+
+    void draw() override;
+    glm::dvec3 evaluate(glm::dvec3 p) override;
+};

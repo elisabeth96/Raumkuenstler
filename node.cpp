@@ -170,3 +170,71 @@ void PointNode::draw() {
 glm::dvec3 PointNode::evaluate(glm::dvec3 p) {
     return value;
 }
+
+void UnionNode::draw() {
+    ImGui::PushItemWidth(120);
+    ImNodes::BeginNode(m_node_id);
+
+    ImNodes::BeginNodeTitleBar();
+    ImGui::TextUnformatted("Union");
+    ImNodes::EndNodeTitleBar();
+
+    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
+    ImGui::Text("Implicit 1");
+    ImNodes::EndInputAttribute();
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    ImGui::Text("Implicit 2");
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
+    ImNodes::EndOutputAttribute();
+    ImNodes::EndNode();
+    ImGui::PopItemWidth();
+}
+
+glm::dvec3 UnionNode::evaluate(glm::dvec3 p) {
+    Node *node_input1 = m_editor->find_node(m_node_id, 0);
+    Node *node_input2 = m_editor->find_node(m_node_id, 1);
+    double v1 = node_input1->evaluate(p).x;
+    double v2 = node_input2->evaluate(p).x;
+    return {std::min(v1, v2), 0, 0};
+}
+
+void SmoothUnionNode::draw() {
+    ImGui::PushItemWidth(120);
+    ImNodes::BeginNode(m_node_id);
+
+    ImNodes::BeginNodeTitleBar();
+    ImGui::TextUnformatted("Union");
+    ImNodes::EndNodeTitleBar();
+
+    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
+    ImGui::Text("Implicit 1");
+    ImNodes::EndInputAttribute();
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    ImGui::Text("Implicit 2");
+    ImNodes::EndInputAttribute();
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
+    ImGui::Text("Rounding");
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
+    ImNodes::EndOutputAttribute();
+    ImNodes::EndNode();
+    ImGui::PopItemWidth();
+}
+
+glm::dvec3 SmoothUnionNode::evaluate(glm::dvec3 p) {
+    Node *node_input1 = m_editor->find_node(m_node_id, 0);
+    Node *node_input2 = m_editor->find_node(m_node_id, 1);
+    Node *node_input3 = m_editor->find_node(m_node_id, 2);
+    double v1 = node_input1->evaluate(p).x;
+    double v2 = node_input2->evaluate(p).x;
+    double r = node_input3->evaluate(p).x;
+    glm::dvec2 u = max(glm::dvec2(r - v1,r - v2), glm::dvec2(0));
+    return {std::max(r, std::min (v1, v2)) - length(u), 0, 0};
+}
