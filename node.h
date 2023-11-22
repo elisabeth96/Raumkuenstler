@@ -5,6 +5,9 @@
 
 #include <vector>
 #include <glm/vec3.hpp>
+#include <map>
+
+#include "compiler.h"
 
 struct Editor;
 
@@ -18,7 +21,7 @@ public:
 
     virtual void draw() = 0;
 
-    virtual glm::dvec3 evaluate(glm::dvec3 p) = 0;
+    virtual std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) = 0;
 };
 
 class OutputNode : public Node {
@@ -27,7 +30,7 @@ public:
 
     void draw() override;
 
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class SphereNode : public Node {
@@ -35,7 +38,7 @@ public:
     SphereNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class TorusNode : public Node {
@@ -43,7 +46,7 @@ public:
     TorusNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class BoxNode : public Node {
@@ -51,7 +54,7 @@ public:
     BoxNode(Editor *editor, int node_id) : Node(editor, node_id, 1) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class ScalarNode : public Node {
@@ -61,7 +64,7 @@ public:
     ScalarNode(Editor *editor, int node_id) : Node(editor, node_id, 0) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class PointNode : public Node {
@@ -71,7 +74,7 @@ public:
     PointNode(Editor *editor, int node_id) : Node(editor, node_id, 0) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class UnionNode : public Node {
@@ -79,7 +82,7 @@ public:
     UnionNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };
 
 class SmoothUnionNode : public Node {
@@ -87,5 +90,5 @@ public:
     SmoothUnionNode(Editor *editor, int node_id) : Node(editor, node_id, 3) {}
 
     void draw() override;
-    glm::dvec3 evaluate(glm::dvec3 p) override;
+    std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
 };

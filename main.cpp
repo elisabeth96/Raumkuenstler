@@ -68,9 +68,12 @@ void callback() {/*
         return;
     }
     auto start = std::chrono::high_resolution_clock::now();
-    auto mesh = mesh_generator([=](glm::dvec3 p) {
-        return editor.m_nodes[0]->evaluate(p).x;
-    }, 200);
+    std::vector<Instruction> instructions;
+    std::map<int, double> constants;
+    int current_register = 3;
+    editor.m_nodes[0]->evaluate(instructions, current_register, constants);
+    std::function<double(glm::dvec3)> f = compile(instructions, constants);
+    auto mesh = mesh_generator(f, 200);
     editor.m_remesh = false;
     auto end = std::chrono::high_resolution_clock::now();
     // print time in ms
@@ -81,7 +84,7 @@ void callback() {/*
 
 int main() {
     ps::options::buildGui = false;
-
+    ps::options::groundPlaneMode = ps::GroundPlaneMode::ShadowOnly;
     ps::init();
     ImNodes::CreateContext();
 
