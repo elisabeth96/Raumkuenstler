@@ -49,17 +49,25 @@ void SphereNode::draw() {
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
     assert(m_num_inputs == 2);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    ImGui::Text("center");
+    //ImGui::Text("center");
+    if (m_editor->find_node(m_node_id, 0)) {
+        ImGui::Text("center");
+    }
+    else {
+        if(ImGui::InputFloat3("center", &m_center.x, "%.3f")) {
+            m_editor->m_remesh = true;
+        }
+    }
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
     //ImGui::Text("radius");
-    // if no input draw a slider, otherwise just draw the inptut name
+    // if no input draw a slider, otherwise just draw the input name
     if(m_editor->find_node(m_node_id, 1)) {
         ImGui::Text("radius");
     }
     else {
-        if(ImGui::InputFloat("radius", &m_radius, 0.1f, 1.0f, "%.3f")) {
+        if(ImGui::InputFloat("radius", &m_radius, 0.1f, 1.0f, "%.2f")) {
             m_editor->m_remesh = true;
         }
     }
@@ -80,8 +88,10 @@ std::vector<int> SphereNode::evaluate(std::vector<Instruction>& instructions, in
         center = node_center->evaluate(instructions, current_register, constants);
     }
     else {
-        auto zero = make_constant(constants, current_register, 0);
-        center = {zero, zero, zero};
+        auto cx = make_constant(constants, current_register, m_center.x);
+        auto cy = make_constant(constants, current_register, m_center.y);
+        auto cz = make_constant(constants, current_register, m_center.z);
+        center = {cx, cy, cz};
     }
     std::vector<int> radius;
     if(node_radius) {
@@ -104,13 +114,41 @@ void TorusNode::draw() {
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
-    assert(m_num_inputs == 2);
+    assert(m_num_inputs == 3);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    ImGui::Text("major radius");
+    //ImGui::Text("major radius");
+    if (m_editor->find_node(m_node_id, 0)) {
+        ImGui::Text("major radius");
+    }
+    else {
+        if(ImGui::InputFloat("major radius", &m_major_r, 0.1f, 1.0f, "%.3f")) {
+            m_editor->m_remesh = true;
+        }
+    }
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
-    ImGui::Text("minor radius");
+    //ImGui::Text("minor radius");
+    if (m_editor->find_node(m_node_id, 1)) {
+        ImGui::Text("minor radius");
+    }
+    else {
+        if(ImGui::InputFloat("minor radius", &m_minor_r, 0.1f, 1.0f, "%.3f")) {
+            m_editor->m_remesh = true;
+        }
+    }
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
+    //ImGui::Text("center");
+    if (m_editor->find_node(m_node_id, 2)) {
+        ImGui::Text("center");
+    }
+    else {
+        if(ImGui::InputFloat3("center", &m_center.x, "%.2f")) {
+            m_editor->m_remesh = true;
+        }
+    }
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
@@ -122,11 +160,32 @@ void TorusNode::draw() {
 std::vector<int> TorusNode::evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) {
     Node *node_radius1 = m_editor->find_node(m_node_id, 0);
     Node *node_radius2 = m_editor->find_node(m_node_id, 1);
-    std::vector<int> r1 = node_radius1->evaluate(instructions, current_register, constants);
-    std::vector<int> r2 = node_radius2->evaluate(instructions, current_register, constants);
-    int res1 = generate_length(instructions, current_register, {0,2});
+    Node *node_center = m_editor->find_node(m_node_id, 2);
+    std::vector<int> r1;
+    if(node_radius1) {
+        r1 = node_radius1->evaluate(instructions, current_register, constants);
+    } else{
+        r1 = {make_constant(constants, current_register, m_major_r)};
+    }
+    std::vector<int> r2;
+    if(node_radius2) {
+        r2 = node_radius2->evaluate(instructions, current_register, constants);
+    } else{
+        r2 = {make_constant(constants, current_register, m_minor_r)};
+    }
+    std::vector<int> c;
+    if(node_center) {
+        c = node_center->evaluate(instructions, current_register, constants);
+    } else{
+        auto cx = make_constant(constants, current_register, m_center.x);
+        auto cy = make_constant(constants, current_register, m_center.y);
+        auto cz = make_constant(constants, current_register, m_center.z);
+        c = {cx, cy, cz};
+    }
+    glm::ivec3 res0 = generate_sub(instructions, current_register, {0,1,2}, {c[0], c[1], c[2]});
+    int res1 = generate_length(instructions, current_register, {res0.x,res0.z});
     int res2 = generate_sub(instructions, current_register, res1, r1[0]);
-    int res3 = generate_length(instructions, current_register, {res2, 1});
+    int res3 = generate_length(instructions, current_register, {res2, res0.y});
     return {generate_sub(instructions, current_register, res3, r2[0])};
 }
 
@@ -139,9 +198,29 @@ void BoxNode::draw() {
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
-    assert(m_num_inputs == 1);
+    assert(m_num_inputs == 2);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    ImGui::Text("Width, Height, Depth");
+    //ImGui::Text("width, height, depth");
+    if (m_editor->find_node(m_node_id, 0)) {
+        ImGui::Text("size");
+    }
+    else {
+        if(ImGui::InputFloat3("size", &m_size.x, "%.2f")) {
+            m_editor->m_remesh = true;
+        }
+    }
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    //ImGui::Text("center");
+    if (m_editor->find_node(m_node_id, 1)) {
+        ImGui::Text("center");
+    }
+    else {
+        if(ImGui::InputFloat3("center", &m_center.x, "%.2f")) {
+            m_editor->m_remesh = true;
+        }
+    }
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
@@ -152,8 +231,27 @@ void BoxNode::draw() {
 
 std::vector<int> BoxNode::evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) {
     Node *node_input = m_editor->find_node(m_node_id, 0);
-    std::vector<int> input = node_input->evaluate(instructions, current_register, constants);
-    glm::ivec3 res1 = generate_abs(instructions, current_register, {0,1,2});
+    Node *node_center = m_editor->find_node(m_node_id, 1);
+    std::vector<int> input;
+    if(node_input) {
+        input = node_input->evaluate(instructions, current_register, constants);
+    } else{
+        auto cx = make_constant(constants, current_register, m_size.x);
+        auto cy = make_constant(constants, current_register, m_size.y);
+        auto cz = make_constant(constants, current_register, m_size.z);
+        input = {cx, cy, cz};
+    }
+    std::vector<int> center;
+    if(node_center) {
+        center  = node_center->evaluate(instructions, current_register, constants);
+    } else{
+        auto cx = make_constant(constants, current_register, m_center.x);
+        auto cy = make_constant(constants, current_register, m_center.y);
+        auto cz = make_constant(constants, current_register, m_center.z);
+        center = {cx, cy, cz};
+    }
+    glm::ivec3 res0 = generate_sub(instructions, current_register, {0,1,2}, {center[0], center[1], center[2]});
+    glm::ivec3 res1 = generate_abs(instructions, current_register, res0);
     glm::ivec3 res2 = generate_sub(instructions, current_register, res1, {input[0], input[1], input[2]});
     int res3 = generate_max_element(instructions, current_register, res2);
     int zero = current_register++;

@@ -36,6 +36,7 @@ public:
 class SphereNode : public Node {
 public:
     float m_radius = 0.2;
+    glm::vec3 m_center = {0, 0, 0};
     SphereNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
@@ -44,7 +45,10 @@ public:
 
 class TorusNode : public Node {
 public:
-    TorusNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
+    float m_major_r = 0.3;
+    float m_minor_r = 0.2;
+    glm::vec3 m_center = {0, 0, 0};
+    TorusNode(Editor *editor, int node_id) : Node(editor, node_id, 3) {}
 
     void draw() override;
     std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
@@ -52,7 +56,9 @@ public:
 
 class BoxNode : public Node {
 public:
-    BoxNode(Editor *editor, int node_id) : Node(editor, node_id, 1) {}
+    glm::vec3 m_center = {0, 0, 0};
+    glm::vec3 m_size = {0.2, 0.3, 0.4};
+    BoxNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;
     std::vector<int> evaluate(std::vector<Instruction>& instructions, int& current_register, std::map<int, double>& constants) override;
