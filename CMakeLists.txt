@@ -19,7 +19,7 @@ find_package(LLVM REQUIRED CONFIG)
 
 add_executable(implicit_meshing
         main.cpp
-        imnodes.cpp
+        third_party/imnodes.cpp
         implicit_meshing.cpp
         implicit_meshing.h
         node.cpp
@@ -28,8 +28,6 @@ add_executable(implicit_meshing
         editor.h
         compiler.cpp
         compiler.h)
-
-#add_executable(test_compiler test.cpp compiler.cpp compiler.h)
 
 message(STATUS "LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
 
@@ -48,6 +46,5 @@ target_link_libraries(implicit_meshing PRIVATE
         LLVMAArch64CodeGen
         LLVMAArch64AsmParser
 )
-#target_link_libraries(test_compiler PRIVATE LLVMCore LLVMSupport LLVMIRReader LLVMExecutionEngine LLVMMCJIT LLVMX86AsmParser LLVMX86CodeGen)
 
 target_compile_options(implicit_meshing PRIVATE -march=native)

@@ -23,6 +23,7 @@ enum class Operation {
     Cos
 };
 
+// Representation of a single instruction used as an input for LLVM compiler
 struct Instruction {
     int input1;
     int input2;
@@ -32,7 +33,8 @@ struct Instruction {
 
 std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions, std::map<int, double>& constants);
 
-int make_constant(std::map<int, double>& constants, int& current_register, double value);
+// helper functions to create instructions
+int generate_constant(std::map<int, double>& constants, int& current_register, double value);
 
 int generate_length(std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v);
 
@@ -74,5 +76,5 @@ int generate_sin (std::vector<Instruction>& instructions, int& current_register,
 
 int generate_cos (std::vector<Instruction>& instructions, int& current_register, int v1);
 
-const char* make_op_name(Operation op);
+const char* return_op_name(Operation op);
 

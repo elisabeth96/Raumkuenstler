@@ -4,7 +4,7 @@
 
 #include "node.h"
 
-#include "imnodes.h"
+#include "third_party/imnodes.h"
 #include "editor.h"
 #include "compiler.h"
 
@@ -34,9 +34,10 @@ void OutputNode::draw() {
 }
 
 std::vector<int>
-OutputNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+OutputNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                  std::map<int, double> &constants) {
     Node *node = m_editor->find_node(m_node_id, 0);
-    return node->evaluate(instructions, current_register, constants);
+    return node->generate_instructions(instructions, current_register, constants);
 }
 
 void SphereNode::draw() {
@@ -50,7 +51,7 @@ void SphereNode::draw() {
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
     assert(m_num_inputs == 2);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    //ImGui::Text("center");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 0)) {
         ImGui::Text("center");
     } else {
@@ -61,8 +62,7 @@ void SphereNode::draw() {
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
-    //ImGui::Text("radius");
-    // if no input draw a slider, otherwise just draw the input name
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 1)) {
         ImGui::Text("radius");
     } else {
@@ -80,23 +80,24 @@ void SphereNode::draw() {
 }
 
 std::vector<int>
-SphereNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+SphereNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                  std::map<int, double> &constants) {
     Node *node_center = m_editor->find_node(m_node_id, 0);
     Node *node_radius = m_editor->find_node(m_node_id, 1);
     std::vector<int> center;
     if (node_center) {
-        center = node_center->evaluate(instructions, current_register, constants);
+        center = node_center->generate_instructions(instructions, current_register, constants);
     } else {
-        auto cx = make_constant(constants, current_register, m_center.x);
-        auto cy = make_constant(constants, current_register, m_center.y);
-        auto cz = make_constant(constants, current_register, m_center.z);
+        auto cx = generate_constant(constants, current_register, m_center.x);
+        auto cy = generate_constant(constants, current_register, m_center.y);
+        auto cz = generate_constant(constants, current_register, m_center.z);
         center = {cx, cy, cz};
     }
     std::vector<int> radius;
     if (node_radius) {
-        radius = node_radius->evaluate(instructions, current_register, constants);
+        radius = node_radius->generate_instructions(instructions, current_register, constants);
     } else {
-        radius = {make_constant(constants, current_register, m_radius)};
+        radius = {generate_constant(constants, current_register, m_radius)};
     }
     glm::ivec3 res1 = generate_sub(instructions, current_register, {0, 1, 2}, {center[0], center[1], center[2]});
     int res2 = generate_length(instructions, current_register, res1);
@@ -111,10 +112,10 @@ void TorusNode::draw() {
     ImGui::TextUnformatted("Torus");
     ImNodes::EndNodeTitleBar();
 
-    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
     assert(m_num_inputs == 3);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    //ImGui::Text("major radius");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 0)) {
         ImGui::Text("major radius");
     } else {
@@ -125,7 +126,7 @@ void TorusNode::draw() {
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
-    //ImGui::Text("minor radius");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 1)) {
         ImGui::Text("minor radius");
     } else {
@@ -136,7 +137,7 @@ void TorusNode::draw() {
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
-    //ImGui::Text("center");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 2)) {
         ImGui::Text("center");
     } else {
@@ -153,29 +154,30 @@ void TorusNode::draw() {
 }
 
 std::vector<int>
-TorusNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+TorusNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                 std::map<int, double> &constants) {
     Node *node_radius1 = m_editor->find_node(m_node_id, 0);
     Node *node_radius2 = m_editor->find_node(m_node_id, 1);
     Node *node_center = m_editor->find_node(m_node_id, 2);
     std::vector<int> r1;
     if (node_radius1) {
-        r1 = node_radius1->evaluate(instructions, current_register, constants);
+        r1 = node_radius1->generate_instructions(instructions, current_register, constants);
     } else {
-        r1 = {make_constant(constants, current_register, m_major_r)};
+        r1 = {generate_constant(constants, current_register, m_major_r)};
     }
     std::vector<int> r2;
     if (node_radius2) {
-        r2 = node_radius2->evaluate(instructions, current_register, constants);
+        r2 = node_radius2->generate_instructions(instructions, current_register, constants);
     } else {
-        r2 = {make_constant(constants, current_register, m_minor_r)};
+        r2 = {generate_constant(constants, current_register, m_minor_r)};
     }
     std::vector<int> c;
     if (node_center) {
-        c = node_center->evaluate(instructions, current_register, constants);
+        c = node_center->generate_instructions(instructions, current_register, constants);
     } else {
-        auto cx = make_constant(constants, current_register, m_center.x);
-        auto cy = make_constant(constants, current_register, m_center.y);
-        auto cz = make_constant(constants, current_register, m_center.z);
+        auto cx = generate_constant(constants, current_register, m_center.x);
+        auto cy = generate_constant(constants, current_register, m_center.y);
+        auto cz = generate_constant(constants, current_register, m_center.z);
         c = {cx, cy, cz};
     }
     glm::ivec3 res0 = generate_sub(instructions, current_register, {0, 1, 2}, {c[0], c[1], c[2]});
@@ -196,7 +198,7 @@ void BoxNode::draw() {
     ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
     assert(m_num_inputs == 2);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
-    //ImGui::Text("width, height, depth");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 0)) {
         ImGui::Text("size");
     } else {
@@ -207,7 +209,7 @@ void BoxNode::draw() {
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
-    //ImGui::Text("center");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 1)) {
         ImGui::Text("center");
     } else {
@@ -224,25 +226,26 @@ void BoxNode::draw() {
 }
 
 std::vector<int>
-BoxNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+BoxNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                               std::map<int, double> &constants) {
     Node *node_input = m_editor->find_node(m_node_id, 0);
     Node *node_center = m_editor->find_node(m_node_id, 1);
     std::vector<int> input;
     if (node_input) {
-        input = node_input->evaluate(instructions, current_register, constants);
+        input = node_input->generate_instructions(instructions, current_register, constants);
     } else {
-        auto cx = make_constant(constants, current_register, m_size.x);
-        auto cy = make_constant(constants, current_register, m_size.y);
-        auto cz = make_constant(constants, current_register, m_size.z);
+        auto cx = generate_constant(constants, current_register, m_size.x);
+        auto cy = generate_constant(constants, current_register, m_size.y);
+        auto cz = generate_constant(constants, current_register, m_size.z);
         input = {cx, cy, cz};
     }
     std::vector<int> center;
     if (node_center) {
-        center = node_center->evaluate(instructions, current_register, constants);
+        center = node_center->generate_instructions(instructions, current_register, constants);
     } else {
-        auto cx = make_constant(constants, current_register, m_center.x);
-        auto cy = make_constant(constants, current_register, m_center.y);
-        auto cz = make_constant(constants, current_register, m_center.z);
+        auto cx = generate_constant(constants, current_register, m_center.x);
+        auto cy = generate_constant(constants, current_register, m_center.y);
+        auto cz = generate_constant(constants, current_register, m_center.z);
         center = {cx, cy, cz};
     }
     glm::ivec3 res0 = generate_sub(instructions, current_register, {0, 1, 2}, {center[0], center[1], center[2]});
@@ -288,7 +291,7 @@ void CylinderNode::draw() {
     ImNodes::EndInputAttribute();
 
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
-    //ImGui::Text("center");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 2)) {
         ImGui::Text("center");
     } else {
@@ -305,37 +308,38 @@ void CylinderNode::draw() {
 }
 
 std::vector<int>
-CylinderNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+CylinderNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                    std::map<int, double> &constants) {
     Node *node_height = m_editor->find_node(m_node_id, 0);
     Node *node_radius = m_editor->find_node(m_node_id, 1);
     Node *node_center = m_editor->find_node(m_node_id, 2);
     std::vector<int> height;
     if (node_height) {
-        height = node_height->evaluate(instructions, current_register, constants);
+        height = node_height->generate_instructions(instructions, current_register, constants);
     } else {
-        height = {make_constant(constants, current_register, m_height)};
+        height = {generate_constant(constants, current_register, m_height)};
     }
     std::vector<int> radius;
     if (node_radius) {
-        radius = node_radius->evaluate(instructions, current_register, constants);
+        radius = node_radius->generate_instructions(instructions, current_register, constants);
     } else {
-        radius = {make_constant(constants, current_register, m_radius)};
+        radius = {generate_constant(constants, current_register, m_radius)};
     }
     std::vector<int> center;
     if (node_center) {
-        center = node_center->evaluate(instructions, current_register, constants);
+        center = node_center->generate_instructions(instructions, current_register, constants);
     } else {
-        auto cx = make_constant(constants, current_register, m_center.x);
-        auto cy = make_constant(constants, current_register, m_center.y);
-        auto cz = make_constant(constants, current_register, m_center.z);
+        auto cx = generate_constant(constants, current_register, m_center.x);
+        auto cy = generate_constant(constants, current_register, m_center.y);
+        auto cz = generate_constant(constants, current_register, m_center.z);
         center = {cx, cy, cz};
     }
     glm::ivec3 res0 = generate_sub(instructions, current_register, {0, 1, 2}, {center[0], center[1], center[2]});
-    int res1 = generate_length(instructions, current_register, {res0.x,  res0.z});
+    int res1 = generate_length(instructions, current_register, {res0.x, res0.z});
     glm::ivec2 res2 = generate_abs(instructions, current_register, {res1, res0.y});
     glm::ivec2 res3 = generate_sub(instructions, current_register, res2, {radius[0], height[0]});
     int res4 = generate_max_element(instructions, current_register, res3);
-    int zero = make_constant(constants, current_register, 0);
+    int zero = generate_constant(constants, current_register, 0);
     int res5 = generate_min(instructions, current_register, res4, zero);
     glm::ivec2 res6 = generate_max(instructions, current_register, res3, {zero, zero});
     int res7 = generate_length(instructions, current_register, res6);
@@ -348,7 +352,6 @@ void ScalarNode::draw() {
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Scalar");
     ImNodes::EndNodeTitleBar();
-//ImGui::Dummy(ImVec2(80.0f, 45.0f));
 
     assert(m_num_inputs == 0);
     if (ImGui::InputFloat("value", &value, 0.1f, 1.0f, "%.3f")) {
@@ -362,7 +365,8 @@ void ScalarNode::draw() {
 }
 
 std::vector<int>
-ScalarNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+ScalarNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                  std::map<int, double> &constants) {
     constants[current_register] = value;
     return {current_register++};
 }
@@ -374,10 +378,10 @@ void PointNode::draw() {
     ImGui::TextUnformatted("Point");
     ImNodes::EndNodeTitleBar();
 
-    ImGui::Dummy(ImVec2(180.0f, 0.0f)); // Adjust width here
+    ImGui::Dummy(ImVec2(180.0f, 0.0f));
     assert(m_num_inputs == 3);
 
-    auto draw_input_coordinate = [&](int i, const char* name) {
+    auto draw_input_coordinate = [&](int i, const char *name) {
         ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, i));
         if (m_editor->find_node(m_node_id, i)) {
             ImGui::Text(name);
@@ -400,29 +404,27 @@ void PointNode::draw() {
 }
 
 std::vector<int>
-PointNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
-    Node* node_x = m_editor->find_node(m_node_id, 0);
-    Node* node_y = m_editor->find_node(m_node_id, 1);
-    Node* node_z = m_editor->find_node(m_node_id, 2);
+PointNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                 std::map<int, double> &constants) {
+    Node *node_x = m_editor->find_node(m_node_id, 0);
+    Node *node_y = m_editor->find_node(m_node_id, 1);
+    Node *node_z = m_editor->find_node(m_node_id, 2);
 
     std::vector<int> value(3);
-    if(node_x) {
-        value[0] = node_x->evaluate(instructions, current_register, constants)[0];
+    if (node_x) {
+        value[0] = node_x->generate_instructions(instructions, current_register, constants)[0];
+    } else {
+        value[0] = generate_constant(constants, current_register, this->value.x);
     }
-    else {
-        value[0] = make_constant(constants, current_register, this->value.x);
+    if (node_y) {
+        value[1] = node_y->generate_instructions(instructions, current_register, constants)[0];
+    } else {
+        value[1] = generate_constant(constants, current_register, this->value.y);
     }
-    if(node_y) {
-        value[1] = node_y->evaluate(instructions, current_register, constants)[0];
-    }
-    else {
-        value[1] = make_constant(constants, current_register, this->value.y);
-    }
-    if(node_z) {
-        value[2] = node_z->evaluate(instructions, current_register, constants)[0];
-    }
-    else {
-        value[2] = make_constant(constants, current_register, this->value.z);
+    if (node_z) {
+        value[2] = node_z->generate_instructions(instructions, current_register, constants)[0];
+    } else {
+        value[2] = generate_constant(constants, current_register, this->value.z);
     }
     return value;
 }
@@ -433,7 +435,6 @@ void TimeNode::draw() {
     ImNodes::BeginNodeTitleBar();
     ImGui::TextUnformatted("Time");
     ImNodes::EndNodeTitleBar();
-//ImGui::Dummy(ImVec2(80.0f, 45.0f));
 
     assert(m_num_inputs == 0);
     m_editor->m_remesh = true;
@@ -445,8 +446,9 @@ void TimeNode::draw() {
 }
 
 std::vector<int>
-TimeNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
-    return {make_constant(constants, current_register, ImGui::GetTime())};
+TimeNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                std::map<int, double> &constants) {
+    return {generate_constant(constants, current_register, ImGui::GetTime())};
 }
 
 void UnionNode::draw() {
@@ -457,7 +459,7 @@ void UnionNode::draw() {
     ImGui::TextUnformatted("Union");
     ImNodes::EndNodeTitleBar();
 
-    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
     assert(m_num_inputs == 2);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("Implicit 1");
@@ -473,11 +475,12 @@ void UnionNode::draw() {
 }
 
 std::vector<int>
-UnionNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+UnionNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                 std::map<int, double> &constants) {
     Node *node_input1 = m_editor->find_node(m_node_id, 0);
     Node *node_input2 = m_editor->find_node(m_node_id, 1);
-    std::vector<int> v1 = node_input1->evaluate(instructions, current_register, constants);
-    std::vector<int> v2 = node_input2->evaluate(instructions, current_register, constants);
+    std::vector<int> v1 = node_input1->generate_instructions(instructions, current_register, constants);
+    std::vector<int> v2 = node_input2->generate_instructions(instructions, current_register, constants);
     return {generate_min(instructions, current_register, v1[0], v2[0])};
 }
 
@@ -489,7 +492,7 @@ void SmoothUnionNode::draw() {
     ImGui::TextUnformatted("Union");
     ImNodes::EndNodeTitleBar();
 
-    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
     assert(m_num_inputs == 3);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("Implicit 1");
@@ -498,7 +501,7 @@ void SmoothUnionNode::draw() {
     ImGui::Text("Implicit 2");
     ImNodes::EndInputAttribute();
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
-    //ImGui::Text("Rounding");
+    // if no input use default value, otherwise just draw the input name
     if (m_editor->find_node(m_node_id, 2)) {
         ImGui::Text("rounding");
     } else {
@@ -514,18 +517,18 @@ void SmoothUnionNode::draw() {
     ImGui::PopItemWidth();
 }
 
-std::vector<int> SmoothUnionNode::evaluate(std::vector<Instruction> &instructions, int &current_register,
-                                           std::map<int, double> &constants) {
+std::vector<int> SmoothUnionNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                                        std::map<int, double> &constants) {
     Node *node_input1 = m_editor->find_node(m_node_id, 0);
     Node *node_input2 = m_editor->find_node(m_node_id, 1);
     Node *node_input3 = m_editor->find_node(m_node_id, 2);
-    std::vector<int> v1 = node_input1->evaluate(instructions, current_register, constants);
-    std::vector<int> v2 = node_input2->evaluate(instructions, current_register, constants);
+    std::vector<int> v1 = node_input1->generate_instructions(instructions, current_register, constants);
+    std::vector<int> v2 = node_input2->generate_instructions(instructions, current_register, constants);
     std::vector<int> r;
     if (node_input3) {
-        r = node_input3->evaluate(instructions, current_register, constants);
+        r = node_input3->generate_instructions(instructions, current_register, constants);
     } else {
-        r = {make_constant(constants, current_register, m_rounding)};
+        r = {generate_constant(constants, current_register, m_rounding)};
     }
     glm::ivec2 res1 = generate_sub(instructions, current_register, {r[0], r[0]}, {v1[0], v2[0]});
     int zero = current_register++;
@@ -542,10 +545,10 @@ void UnaryOpNode::draw() {
     ImNodes::BeginNode(m_node_id);
 
     ImNodes::BeginNodeTitleBar();
-    ImGui::TextUnformatted(make_op_name(m_op));
+    ImGui::TextUnformatted(return_op_name(m_op));
     ImNodes::EndNodeTitleBar();
 
-    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
     assert(m_num_inputs == 1);
     ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
     ImGui::Text("Input");
@@ -557,10 +560,10 @@ void UnaryOpNode::draw() {
     ImGui::PopItemWidth();
 }
 
-std::vector<int> UnaryOpNode::evaluate(std::vector<Instruction> &instructions, int &current_register,
-                                           std::map<int, double> &constants) {
+std::vector<int> UnaryOpNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                                    std::map<int, double> &constants) {
     Node *node_input = m_editor->find_node(m_node_id, 0);
-    std::vector<int> input = node_input->evaluate(instructions, current_register, constants);
+    std::vector<int> input = node_input->generate_instructions(instructions, current_register, constants);
     switch (m_op) {
         case Operation::Sqrt:
             return {generate_sqrt(instructions, current_register, input[0])};
@@ -573,5 +576,4 @@ std::vector<int> UnaryOpNode::evaluate(std::vector<Instruction> &instructions, i
         default:
             assert(false);
     }
-    return {-1};
 }

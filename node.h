@@ -16,13 +16,16 @@ public:
     Node(Editor *editor, int node_id, int num_inputs);
 
     Editor *m_editor;
+    // The node id corresponds to the index in the editor's m_nodes vector
     int m_node_id;
     int m_num_inputs;
 
+    // Draw the node
     virtual void draw() = 0;
 
+    // Returns the register id(s) of the output of the node
     virtual std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) = 0;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) = 0;
 };
 
 class OutputNode : public Node {
@@ -32,7 +35,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class SphereNode : public Node {
@@ -45,7 +48,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class TorusNode : public Node {
@@ -59,7 +62,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class BoxNode : public Node {
@@ -72,7 +75,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class CylinderNode : public Node {
@@ -86,7 +89,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class ScalarNode : public Node {
@@ -98,7 +101,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class PointNode : public Node {
@@ -110,7 +113,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class TimeNode : public Node {
@@ -120,7 +123,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class UnionNode : public Node {
@@ -130,7 +133,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class SmoothUnionNode : public Node {
@@ -142,7 +145,7 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
 class UnaryOpNode : public Node {
@@ -156,6 +159,6 @@ public:
     void draw() override;
 
     std::vector<int>
-    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 

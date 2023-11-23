@@ -139,7 +139,7 @@ std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions
     };
 }
 
-int make_constant(std::map<int, double>& constants, int& current_register, double value) {
+int generate_constant(std::map<int, double>& constants, int& current_register, double value) {
     int id = current_register++;
     constants[id] = value;
     return id;
@@ -285,7 +285,7 @@ int generate_cos (std::vector<Instruction>& instructions, int& current_register,
     return i1.output;
 }
 
-const char* make_op_name(Operation op){
+const char* return_op_name(Operation op){
     switch(op){
         case Operation::Add:
             return "Add";

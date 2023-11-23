@@ -6,8 +6,8 @@
 #include <memory>
 #include <glm/glm.hpp>
 
-#include "probabilistic-quadrics.hh"
-#include "hash_table7.hpp"
+#include "third_party/probabilistic-quadrics.hh"
+#include "third_party/hash_table7.hpp"
 
 using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
 using quadric = pq::quadric<glm_trait>;

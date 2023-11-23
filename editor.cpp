@@ -3,18 +3,21 @@
 //
 
 #include "editor.h"
-#include "imnodes.h"
+#include "third_party/imnodes.h"
 #include <algorithm>
 
+// Every Editor contains an OutputNode
 Editor::Editor() {
     add_node<OutputNode>();
 }
 
 void Editor::draw() {
     ImNodes::BeginNodeEditor();
+    // draw all nodes that currenty exist
     for (auto &node: m_nodes) {
         node->draw();
     }
+    // check all possible link combinations and draw existing ones
     int counter = 0;
     for (int i = 0; i < m_inputs.size(); ++i) {
         for (int j = 0; j < m_inputs[i].size(); ++j) {
