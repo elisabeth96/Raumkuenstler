@@ -11,9 +11,15 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(polyscope)
 
+# add include dir for mac
+if (APPLE)
+    set(LLVM_DIR /opt/homebrew/opt/llvm/lib/cmake/llvm)
+endif ()
 find_package(LLVM REQUIRED CONFIG)
 
-add_executable(implicit_meshing main.cpp imnodes.cpp
+add_executable(implicit_meshing
+        main.cpp
+        imnodes.cpp
         implicit_meshing.cpp
         implicit_meshing.h
         node.cpp
@@ -25,7 +31,23 @@ add_executable(implicit_meshing main.cpp imnodes.cpp
 
 #add_executable(test_compiler test.cpp compiler.cpp compiler.h)
 
-target_link_libraries(implicit_meshing PRIVATE polyscope LLVMCore LLVMSupport LLVMIRReader LLVMExecutionEngine LLVMMCJIT LLVMX86AsmParser LLVMX86CodeGen)
+message(STATUS "LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
+
+target_include_directories(implicit_meshing PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(implicit_meshing PRIVATE
+        polyscope
+        LLVMCore
+        LLVMSupport
+        LLVMIRReader
+        LLVMExecutionEngine
+        LLVMMCJIT
+        LLVMX86AsmParser
+        LLVMX86CodeGen
+        LLVMARMCodeGen
+        LLVMARMAsmParser
+        LLVMAArch64CodeGen
+        LLVMAArch64AsmParser
+)
 #target_link_libraries(test_compiler PRIVATE LLVMCore LLVMSupport LLVMIRReader LLVMExecutionEngine LLVMMCJIT LLVMX86AsmParser LLVMX86CodeGen)
 
 target_compile_options(implicit_meshing PRIVATE -march=native)
