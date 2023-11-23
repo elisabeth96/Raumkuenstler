@@ -60,9 +60,13 @@ glm::ivec2 generate_max (std::vector<Instruction>& instructions, int& current_re
 
 glm::ivec3 generate_max (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1, glm::ivec3 v2);
 
+int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1);
+
 int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1);
 
 int generate_abs (std::vector<Instruction>& instructions, int& current_register, int v1);
+
+glm::ivec2 generate_abs (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1);
 
 glm::ivec3 generate_abs (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1);
 

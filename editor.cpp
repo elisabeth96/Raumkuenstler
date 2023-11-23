@@ -62,6 +62,10 @@ void Editor::draw_primitive_dropdown() {
             selected_node = 2;
             add_node<BoxNode>();
         }
+        if (ImGui::Selectable("Cylinder", selected_node == 3)) {
+            selected_node = 3;
+            add_node<CylinderNode>();
+        }
         ImGui::EndCombo();
     }
     ImGui::PopItemWidth();

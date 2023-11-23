@@ -239,6 +239,12 @@ glm::ivec3 generate_max (std::vector<Instruction>& instructions, int& current_re
     return {i1.output, i2.output, i3.output};
 }
 
+int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1) {
+    Instruction i1 = {v1.x, v1.y, current_register++, Operation::Max};
+    instructions.insert(instructions.end(), {i1});
+    return i1.output;
+}
+
 int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1) {
     Instruction i1 = {v1.x, v1.y, current_register++, Operation::Max};
     Instruction i2 = {i1.output, v1.z, current_register++, Operation::Max};
@@ -250,6 +256,13 @@ int generate_abs (std::vector<Instruction>& instructions, int& current_register,
     Instruction i1 = {v1, -1, current_register++, Operation::Abs};
     instructions.insert(instructions.end(), {i1});
     return i1.output;
+}
+
+glm::ivec2 generate_abs (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1) {
+    Instruction i1 = {v1.x, -1, current_register++, Operation::Abs};
+    Instruction i2 = {v1.y, -1, current_register++, Operation::Abs};
+    instructions.insert(instructions.end(), {i1, i2});
+    return {i1.output, i2.output};
 }
 
 glm::ivec3 generate_abs (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1) {

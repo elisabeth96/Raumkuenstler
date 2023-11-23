@@ -75,6 +75,20 @@ public:
     evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
+class CylinderNode : public Node {
+public:
+    glm::vec3 m_center = {0, 0, 0};
+    float m_height = 0.4;
+    float m_radius = 0.2;
+
+    CylinderNode(Editor *editor, int node_id) : Node(editor, node_id, 3) {}
+
+    void draw() override;
+
+    std::vector<int>
+    evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+};
+
 class ScalarNode : public Node {
 public:
     float value = 0;

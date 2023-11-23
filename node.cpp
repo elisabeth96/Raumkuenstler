@@ -257,6 +257,91 @@ BoxNode::evaluate(std::vector<Instruction> &instructions, int &current_register,
     return {generate_add(instructions, current_register, res4, res6)};
 }
 
+void CylinderNode::draw() {
+    ImGui::PushItemWidth(120);
+    ImNodes::BeginNode(m_node_id);
+
+    ImNodes::BeginNodeTitleBar();
+    ImGui::TextUnformatted("Cylinder");
+    ImNodes::EndNodeTitleBar();
+
+    ImGui::Dummy(ImVec2(120.0f, 0.0f)); // Adjust width here
+    assert(m_num_inputs == 3);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
+    if (m_editor->find_node(m_node_id, 0)) {
+        ImGui::Text("height");
+    } else {
+        if (ImGui::InputFloat("height", &m_height, 0.1f, 1.0f, "%.3f")) {
+            m_editor->m_remesh = true;
+        }
+    }
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    if (m_editor->find_node(m_node_id, 1)) {
+        ImGui::Text("radius");
+    } else {
+        if (ImGui::InputFloat("radius", &m_radius, 0.1f, 1.0f, "%.3f")) {
+            m_editor->m_remesh = true;
+        }
+    }
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 2));
+    //ImGui::Text("center");
+    if (m_editor->find_node(m_node_id, 2)) {
+        ImGui::Text("center");
+    } else {
+        if (ImGui::InputFloat3("center", &m_center.x, "%.2f")) {
+            m_editor->m_remesh = true;
+        }
+    }
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
+    ImNodes::EndOutputAttribute();
+    ImNodes::EndNode();
+    ImGui::PopItemWidth();
+}
+
+std::vector<int>
+CylinderNode::evaluate(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) {
+    Node *node_height = m_editor->find_node(m_node_id, 0);
+    Node *node_radius = m_editor->find_node(m_node_id, 1);
+    Node *node_center = m_editor->find_node(m_node_id, 2);
+    std::vector<int> height;
+    if (node_height) {
+        height = node_height->evaluate(instructions, current_register, constants);
+    } else {
+        height = {make_constant(constants, current_register, m_height)};
+    }
+    std::vector<int> radius;
+    if (node_radius) {
+        radius = node_radius->evaluate(instructions, current_register, constants);
+    } else {
+        radius = {make_constant(constants, current_register, m_radius)};
+    }
+    std::vector<int> center;
+    if (node_center) {
+        center = node_center->evaluate(instructions, current_register, constants);
+    } else {
+        auto cx = make_constant(constants, current_register, m_center.x);
+        auto cy = make_constant(constants, current_register, m_center.y);
+        auto cz = make_constant(constants, current_register, m_center.z);
+        center = {cx, cy, cz};
+    }
+    glm::ivec3 res0 = generate_sub(instructions, current_register, {0, 1, 2}, {center[0], center[1], center[2]});
+    int res1 = generate_length(instructions, current_register, {res0.x,  res0.z});
+    glm::ivec2 res2 = generate_abs(instructions, current_register, {res1, res0.y});
+    glm::ivec2 res3 = generate_sub(instructions, current_register, res2, {radius[0], height[0]});
+    int res4 = generate_max_element(instructions, current_register, res3);
+    int zero = make_constant(constants, current_register, 0);
+    int res5 = generate_min(instructions, current_register, res4, zero);
+    glm::ivec2 res6 = generate_max(instructions, current_register, res3, {zero, zero});
+    int res7 = generate_length(instructions, current_register, res6);
+    return {generate_add(instructions, current_register, res5, res7)};
+}
+
 void ScalarNode::draw() {
     ImGui::PushItemWidth(120);
     ImNodes::BeginNode(m_node_id);
