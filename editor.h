@@ -11,6 +11,7 @@
 
 constexpr int INPUT_ATTRIBUTE_OFFSET = 10e6;
 constexpr int OUTPUT_ATTRIBUTE_OFFSET = 20e6;
+
 class Editor {
 public:
     Editor();
@@ -25,13 +26,22 @@ public:
     bool m_remesh = true;
 
     void draw();
-    void handle_links();
-    void draw_node_dropdown();
-    Node* find_node(int node_id, int input_id);
 
-    template <class T>
+    void handle_links();
+
+    void draw_primitive_dropdown();
+
+    void draw_operator_dropdown();
+
+    void draw_math_dropdown();
+
+    Node *find_node(int node_id, int input_id);
+
+    template<class T, Operation op = Operation::None>
     void add_node();
+
     int get_input_attribute_id(int node_id, int input_id);
+
     int get_output_attribute_id(int node_id);
 };
 

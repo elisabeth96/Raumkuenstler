@@ -92,6 +92,14 @@ std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions
                 // Implement Abs operation
                 result = builder.CreateSelect(builder.CreateFCmpULT(lhs, llvm::ConstantFP::get(context, llvm::APFloat(0.0))), builder.CreateFNeg(lhs), lhs);
                 break;
+            case Operation::Sin:
+                // Implement Sin operation
+                result = builder.CreateCall(module->getOrInsertFunction("llvm.sin.f64", funcType), lhs, "sintmp");
+                break;
+            case Operation::Cos:
+                // Implement Cos operation
+                result = builder.CreateCall(module->getOrInsertFunction("llvm.cos.f64", funcType), lhs, "costmp");
+                break;
             default:
                 // Handle unknown operation
                 assert(false && "Unknown operation");
@@ -250,4 +258,41 @@ glm::ivec3 generate_abs (std::vector<Instruction>& instructions, int& current_re
     Instruction i3 = {v1.z, -1, current_register++, Operation::Abs};
     instructions.insert(instructions.end(), {i1, i2, i3});
     return {i1.output, i2.output, i3.output};
+}
+
+int generate_sin (std::vector<Instruction>& instructions, int& current_register, int v1) {
+    Instruction i1 = {v1, -1, current_register++, Operation::Sin};
+    instructions.insert(instructions.end(), {i1});
+    return i1.output;
+}
+
+int generate_cos (std::vector<Instruction>& instructions, int& current_register, int v1) {
+    Instruction i1 = {v1, -1, current_register++, Operation::Cos};
+    instructions.insert(instructions.end(), {i1});
+    return i1.output;
+}
+
+const char* make_op_name(Operation op){
+    switch(op){
+        case Operation::Add:
+            return "Add";
+        case Operation::Sub:
+            return "Sub";
+        case Operation::Mul:
+            return "Mul";
+        case Operation::Sqrt:
+            return "Sqrt";
+        case Operation::Min:
+            return "Min";
+        case Operation::Max:
+            return "Max";
+        case Operation::Abs:
+            return "Abs";
+        case Operation::Sin:
+            return "Sin";
+        case Operation::Cos:
+            return "Cos";
+        default:
+            return "Unknown";
+    }
 }

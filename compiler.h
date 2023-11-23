@@ -11,13 +11,16 @@
 #include <glm/vec2.hpp>
 
 enum class Operation {
-    Add = 0,
+    None = 0,
+    Add,
     Sub,
     Mul,
     Sqrt,
     Min,
     Max,
-    Abs
+    Abs,
+    Sin,
+    Cos
 };
 
 struct Instruction {
@@ -62,4 +65,10 @@ int generate_max_element (std::vector<Instruction>& instructions, int& current_r
 int generate_abs (std::vector<Instruction>& instructions, int& current_register, int v1);
 
 glm::ivec3 generate_abs (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1);
+
+int generate_sin (std::vector<Instruction>& instructions, int& current_register, int v1);
+
+int generate_cos (std::vector<Instruction>& instructions, int& current_register, int v1);
+
+const char* make_op_name(Operation op);
 

@@ -56,7 +56,11 @@ void callback() {/*
     */
 
     static Editor editor;
-    editor.draw_node_dropdown();
+    editor.draw_primitive_dropdown();
+    ImGui::SameLine();
+    editor.draw_operator_dropdown();
+    ImGui::SameLine();
+    editor.draw_math_dropdown();
     editor.draw();
     editor.handle_links();
 

@@ -36,7 +36,7 @@ void Editor::handle_links() {
         }
         for (auto &input: m_inputs) {
             for (auto &link: input) {
-                if (link.second == end_attr - INPUT_ATTRIBUTE_OFFSET){
+                if (link.second == end_attr - INPUT_ATTRIBUTE_OFFSET) {
                     link.first = start_attr - OUTPUT_ATTRIBUTE_OFFSET;
                     m_remesh = true;
                     return;
@@ -46,39 +46,68 @@ void Editor::handle_links() {
     }
 }
 
-void Editor::draw_node_dropdown() {
-    static int selectedNode = -1;
+void Editor::draw_primitive_dropdown() {
+    static int selected_node = -1;
     ImGui::PushItemWidth(120);
-    if (ImGui::BeginCombo("##combo", "Add Node")) {
-        if (ImGui::Selectable("Sphere", selectedNode == 0)) {
-            selectedNode = 0;
+    if (ImGui::BeginCombo("##combo", "Primitive")) {
+        if (ImGui::Selectable("Sphere", selected_node == 0)) {
+            selected_node = 0;
             add_node<SphereNode>();
         }
-        if (ImGui::Selectable("Scalar", selectedNode == 1)) {
-            selectedNode = 1;
-            add_node<ScalarNode>();
-        }
-        if (ImGui::Selectable("Point", selectedNode == 2)) {
-            selectedNode = 2;
-            add_node<PointNode>();
-        }
-        if (ImGui::Selectable("Torus", selectedNode == 3)) {
-            selectedNode = 3;
+        if (ImGui::Selectable("Torus", selected_node == 1)) {
+            selected_node = 1;
             add_node<TorusNode>();
         }
-        if (ImGui::Selectable("Box", selectedNode == 4)) {
-            selectedNode = 4;
+        if (ImGui::Selectable("Box", selected_node == 2)) {
+            selected_node = 2;
             add_node<BoxNode>();
         }
-        if (ImGui::Selectable("Union", selectedNode == 5)) {
-            selectedNode = 5;
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
+}
+
+void Editor::draw_operator_dropdown() {
+    static int selected_node = -1;
+    ImGui::PushItemWidth(120);
+    if (ImGui::BeginCombo("##combo1", "Operator")) {
+        if (ImGui::Selectable("Union", selected_node == 0)) {
+            selected_node = 0;
             add_node<UnionNode>();
         }
-        if (ImGui::Selectable("Smooth Union", selectedNode == 6)) {
-            selectedNode = 6;
+        if (ImGui::Selectable("Smooth Union", selected_node == 1)) {
+            selected_node = 1;
             add_node<SmoothUnionNode>();
         }
+        ImGui::EndCombo();
+    }
+    ImGui::PopItemWidth();
+}
 
+void Editor::draw_math_dropdown() {
+    static int selected_node = -1;
+    ImGui::PushItemWidth(120);
+    if (ImGui::BeginCombo("##combo2", "Math")) {
+        if (ImGui::Selectable("Scalar", selected_node == 0)) {
+            selected_node = 0;
+            add_node<ScalarNode>();
+        }
+        if (ImGui::Selectable("Point", selected_node == 1)) {
+            selected_node = 1;
+            add_node<PointNode>();
+        }
+        if (ImGui::Selectable("Time", selected_node == 2)) {
+            selected_node = 2;
+            add_node<TimeNode>();
+        }
+        if (ImGui::Selectable("Sine", selected_node == 3)) {
+            selected_node = 3;
+            add_node<UnaryOpNode, Operation::Sin>();
+        }
+        if (ImGui::Selectable("Cosine", selected_node == 4)) {
+            selected_node = 4;
+            add_node<UnaryOpNode, Operation::Cos>();
+        }
         ImGui::EndCombo();
     }
     ImGui::PopItemWidth();
@@ -92,9 +121,13 @@ Node *Editor::find_node(int node_id, int input_id) {
     return m_nodes[input_node_id].get();
 }
 
-template<class T>
+template<class T, Operation op>
 void Editor::add_node() {
-    m_nodes.push_back(std::make_unique<T>(this, m_nodes.size()));
+    if constexpr (op == Operation::None) {
+        m_nodes.push_back(std::make_unique<T>(this, m_nodes.size()));
+    } else {
+        m_nodes.push_back(std::make_unique<T>(this, m_nodes.size(), op));
+    }
     m_inputs.emplace_back();
     for (int i = 0; i < m_nodes.back()->m_num_inputs; ++i) {
         m_inputs.back().emplace_back(-1, m_current_input_id++);
@@ -102,9 +135,9 @@ void Editor::add_node() {
 }
 
 int Editor::get_input_attribute_id(int node_id, int input_id) {
-    return INPUT_ATTRIBUTE_OFFSET+ m_inputs[node_id][input_id].second;
+    return INPUT_ATTRIBUTE_OFFSET + m_inputs[node_id][input_id].second;
 }
 
 int Editor::get_output_attribute_id(int node_id) {
-    return OUTPUT_ATTRIBUTE_OFFSET+ node_id;
+    return OUTPUT_ATTRIBUTE_OFFSET + node_id;
 }
