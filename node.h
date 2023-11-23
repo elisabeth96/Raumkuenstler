@@ -35,6 +35,7 @@ public:
 
 class SphereNode : public Node {
 public:
+    float m_radius = 0.2;
     SphereNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
 
     void draw() override;

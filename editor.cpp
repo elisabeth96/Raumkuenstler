@@ -86,6 +86,9 @@ void Editor::draw_node_dropdown() {
 
 Node *Editor::find_node(int node_id, int input_id) {
     int input_node_id = m_inputs[node_id][input_id].first;
+    if (input_node_id == -1) {
+        return nullptr;
+    }
     return m_nodes[input_node_id].get();
 }
 

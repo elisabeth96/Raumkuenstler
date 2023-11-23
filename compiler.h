@@ -29,11 +29,15 @@ struct Instruction {
 
 std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions, std::map<int, double>& constants);
 
+int make_constant(std::map<int, double>& constants, int& current_register, double value);
+
 int generate_length(std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v);
 
 int generate_length(std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v);
 
 glm::ivec3 generate_sub (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1, glm::ivec3 v2);
+
+glm::ivec2 generate_sub (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1, glm::ivec2 v2);
 
 int generate_sub (std::vector<Instruction>& instructions, int& current_register, int v1, int v2);
 
@@ -48,6 +52,12 @@ int generate_sqrt (std::vector<Instruction>& instructions, int& current_register
 int generate_min (std::vector<Instruction>& instructions, int& current_register, int v1, int v2);
 
 int generate_max (std::vector<Instruction>& instructions, int& current_register, int v1, int v2);
+
+glm::ivec2 generate_max (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1, glm::ivec2 v2);
+
+glm::ivec3 generate_max (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1, glm::ivec3 v2);
+
+int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1);
 
 int generate_abs (std::vector<Instruction>& instructions, int& current_register, int v1);
 

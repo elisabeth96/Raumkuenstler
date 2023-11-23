@@ -131,6 +131,12 @@ std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions
     };
 }
 
+int make_constant(std::map<int, double>& constants, int& current_register, double value) {
+    int id = current_register++;
+    constants[id] = value;
+    return id;
+}
+
 int generate_length(std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v) {
     Instruction i1 = {v.x, v.x, current_register++, Operation::Mul};
     Instruction i2 = {v.y, v.y, current_register++, Operation::Mul};
@@ -157,6 +163,13 @@ glm::ivec3 generate_sub (std::vector<Instruction>& instructions, int& current_re
     Instruction i3 = {v1.z, v2.z, current_register++, Operation::Sub};
     instructions.insert(instructions.end(), {i1, i2, i3});
     return {i1.output, i2.output, i3.output};
+}
+
+glm::ivec2 generate_sub (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1, glm::ivec2 v2) {
+    Instruction i1 = {v1.x, v2.x, current_register++, Operation::Sub};
+    Instruction i2 = {v1.y, v2.y, current_register++, Operation::Sub};
+    instructions.insert(instructions.end(), {i1, i2});
+    return {i1.output, i2.output};
 }
 
 int generate_sub (std::vector<Instruction>& instructions, int& current_register, int v1, int v2) {
@@ -201,6 +214,28 @@ int generate_max (std::vector<Instruction>& instructions, int& current_register,
     Instruction i1 = {v1, v2, current_register++, Operation::Max};
     instructions.insert(instructions.end(), {i1});
     return i1.output;
+}
+
+glm::ivec2 generate_max (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1, glm::ivec2 v2) {
+    Instruction i1 = {v1.x, v2.x, current_register++, Operation::Max};
+    Instruction i2 = {v1.y, v2.y, current_register++, Operation::Max};
+    instructions.insert(instructions.end(), {i1, i2});
+    return {i1.output, i2.output};
+}
+
+glm::ivec3 generate_max (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1, glm::ivec3 v2) {
+    Instruction i1 = {v1.x, v2.x, current_register++, Operation::Max};
+    Instruction i2 = {v1.y, v2.y, current_register++, Operation::Max};
+    Instruction i3 = {v1.z, v2.z, current_register++, Operation::Max};
+    instructions.insert(instructions.end(), {i1, i2, i3});
+    return {i1.output, i2.output, i3.output};
+}
+
+int generate_max_element (std::vector<Instruction>& instructions, int& current_register, glm::ivec3 v1) {
+    Instruction i1 = {v1.x, v1.y, current_register++, Operation::Max};
+    Instruction i2 = {i1.output, v1.z, current_register++, Operation::Max};
+    instructions.insert(instructions.end(), {i1, i2});
+    return i2.output;
 }
 
 int generate_abs (std::vector<Instruction>& instructions, int& current_register, int v1) {
