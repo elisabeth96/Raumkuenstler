@@ -10,6 +10,8 @@
 #include "third_party/hash_table7.hpp"
 
 #include <tbb/parallel_for.h>
+#include <tbb/task_group.h>
+#include <tbb/enumerable_thread_specific.h>
 
 using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
 using quadric = pq::quadric<glm_trait>;
@@ -106,6 +108,100 @@ glm::dvec3 find_point_on_surface(std::pair<glm::dvec3, double> neg, std::pair<gl
     return interpolate(neg, pos);
 }
 
+struct Item {
+    double value;
+    size_t index;
+};
+
+using GridMap = emhash7::HashMap<glm::ivec3, Item, GridHash>;
+
+struct SharedData {
+    tbb::enumerable_thread_specific<GridMap> &grids;
+    std::function<double(glm::dvec3)> f;
+    glm::dvec3 lower, upper;
+    int n;
+};
+
+struct Task;
+
+size_t num_voxels(const GridCell &cell) {
+    glm::ivec3 grid_size = cell.second - cell.first;
+    return size_t(grid_size.x) * size_t(grid_size.y) * size_t(grid_size.z);
+}
+
+struct Task {
+    GridCell cell{};
+    SharedData *data = nullptr;
+
+    void operator()() const {
+        glm::ivec3 grid_size = cell.second - cell.first;
+        // if the cell is too small to divide it again, just evaluate the function at the lower corner
+        if (num_voxels(cell) <= 16 || grid_size.x == 1 || grid_size.y == 1 || grid_size.z == 1) {
+            auto &grid = data->grids.local();
+            for (int i = cell.first.x; i < cell.second.x; ++i) {
+                for (int j = cell.first.y; j < cell.second.y; ++j) {
+                    for (int k = cell.first.z; k < cell.second.z; ++k) {
+                        glm::ivec3 index = {i, j, k};
+                        grid[index].value = data->f(index_to_grid_point(index));
+                    }
+                }
+            }
+            return;
+        }
+        // if the cell does not contain a zero-crossing, skip the cell
+        glm::dvec3 cell_lower = index_to_grid_point(cell.first);
+        glm::dvec3 cell_upper = index_to_grid_point(cell.second);
+        double v = data->f((cell_upper + cell_lower) / 2.0);
+        if (abs(v) > 1.5 * glm::length(cell_upper - cell_lower) / 2.0) {
+            return;
+        }
+
+        // if the cell contains a zero-crossing, subdivide it into 8 smaller cells
+        generate_children();
+    }
+
+    void generate_children() const {
+        auto current = cell;
+        glm::ivec3 min_coord = current.first;
+        glm::ivec3 max_coord = current.second;
+
+        // Ensure the cell dimensions are valid
+        if (max_coord.x <= min_coord.x || max_coord.y <= min_coord.y || max_coord.z <= min_coord.z) {
+            throw std::invalid_argument("Invalid cell dimensions");
+        }
+
+        // Calculate the size of each child cell
+        glm::ivec3 cell_size = (max_coord - min_coord) / 2;
+
+        // Ensure each child cell will have a positive size
+        assert(cell_size.x > 0 && cell_size.y > 0 && cell_size.z > 0);
+
+        tbb::task_group tg;
+        for (int x = 0; x < 2; ++x) {
+            for (int y = 0; y < 2; ++y) {
+                for (int z = 0; z < 2; ++z) {
+                    glm::ivec3 child_min = min_coord + cell_size * glm::ivec3(x, y, z);
+                    glm::ivec3 child_max = child_min + cell_size;
+
+                    // Adjust the max boundary for the last cell in each dimension
+                    if (x == 1) child_max.x = max_coord.x;
+                    if (y == 1) child_max.y = max_coord.y;
+                    if (z == 1) child_max.z = max_coord.z;
+
+                    GridCell child_cell(child_min, child_max);
+                    tg.run(Task{child_cell, data});
+                    //grid_cells.push_back(child_cell);
+                }
+            }
+        }
+        tg.wait();
+    }
+
+    glm::dvec3 index_to_grid_point(glm::dvec3 index) const {
+        return data->lower + index / (data->n - 1.0) * (data->upper - data->lower);
+    };
+};
+
 QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
     glm::dvec3 lower{-3};
     glm::dvec3 upper{3};
@@ -115,116 +211,63 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
     };
 
     auto gradient_f = [=](glm::dvec3 p) -> glm::dvec3 {
-        double eps = 10e-5;
-        double dx = (f({p.x + eps, p.y, p.z}) - f({p.x - eps, p.y, p.z})) / (2 * eps);
-        double dy = (f({p.x, p.y + eps, p.z}) - f({p.x, p.y - eps, p.z})) / (2 * eps);
-        double dz = (f({p.x, p.y, p.z + eps}) - f({p.x, p.y, p.z - eps})) / (2 * eps);
+        double eps = 10e-6;
+        double dx = (f({p.x + eps, p.y, p.z}) - f({p.x - eps, p.y, p.z})) / (2*eps);
+        double dy = (f({p.x, p.y + eps, p.z}) - f({p.x, p.y - eps, p.z})) / (2*eps);
+        double dz = (f({p.x, p.y, p.z + eps}) - f({p.x, p.y, p.z - eps})) / (2*eps);
         return {dx, dy, dz};
     };
 
-    /* used for debugging
-    auto draw_grid_cell = [=](GridCell cell) {
-        glm::vec3 lower = index_to_grid_point(cell.first);
-        glm::vec3 upper = index_to_grid_point(cell.second);
-        std::vector<glm::vec3> pts{
-                // Bottom square
-                glm::vec3{lower[0], lower[1], lower[2]}, glm::vec3{upper[0], lower[1], lower[2]},
-                glm::vec3{upper[0], lower[1], lower[2]}, glm::vec3{upper[0], lower[1], upper[2]},
-                glm::vec3{upper[0], lower[1], upper[2]}, glm::vec3{lower[0], lower[1], upper[2]},
-                glm::vec3{lower[0], lower[1], upper[2]}, glm::vec3{lower[0], lower[1], lower[2]},
-
-                // Top square
-                glm::vec3{lower[0], upper[1], lower[2]}, glm::vec3{upper[0], upper[1], lower[2]},
-                glm::vec3{upper[0], upper[1], lower[2]}, glm::vec3{upper[0], upper[1], upper[2]},
-                glm::vec3{upper[0], upper[1], upper[2]}, glm::vec3{lower[0], upper[1], upper[2]},
-                glm::vec3{lower[0], upper[1], upper[2]}, glm::vec3{lower[0], upper[1], lower[2]},
-
-                // Connecting lines between top and bottom squares
-                glm::vec3{lower[0], lower[1], lower[2]}, glm::vec3{lower[0], upper[1], lower[2]},
-                glm::vec3{upper[0], lower[1], lower[2]}, glm::vec3{upper[0], upper[1], lower[2]},
-                glm::vec3{upper[0], lower[1], upper[2]}, glm::vec3{upper[0], upper[1], upper[2]},
-                glm::vec3{lower[0], lower[1], upper[2]}, glm::vec3{lower[0], upper[1], upper[2]}
-        };
-
-        std::vector<std::array<size_t, 2>> lines
-                = {{0,  1},
-                   {2,  3},
-                   {4,  5},
-                   {6,  7},
-                   {8,  9},
-                   {10, 11},
-                   {12, 13},
-                   {14, 15},
-                   {16, 17},
-                   {18, 19},
-                   {20, 21},
-                   {22, 23}};
-
-        static size_t id = 0;
-        auto bb_lines = ps::registerCurveNetwork("bounding_box" + std::to_string(id++), pts, lines);
-        bb_lines->setRadius(0.003);
-    };*/
-
-    // stack of grid cells used in recursive subdivision algorithm
-    std::vector<GridCell> grid_cells;
-    grid_cells.push_back({{0, 0, 0},
-                          {n, n, n}});
-
-    emhash7::HashMap<glm::ivec3, double, GridHash> grid;
+    auto start_t = std::chrono::high_resolution_clock::now();
+    tbb::enumerable_thread_specific<GridMap> grids;
 
     // subdivide cells that contain zero-crossings
-    auto start_t = std::chrono::high_resolution_clock::now();
-    while (!grid_cells.empty()) {
-        GridCell cell = grid_cells.back();
-        grid_cells.pop_back();
-        glm::ivec3 grid_size = cell.second - cell.first;
-        // if the cell is too small to divide it again, just evaluate the function at the lower corner
-        if (grid_size.x == 1 || grid_size.y == 1 || grid_size.z == 1) {
-            for (int i = cell.first.x; i < cell.second.x; ++i) {
-                for (int j = cell.first.y; j < cell.second.y; ++j) {
-                    for (int k = cell.first.z; k < cell.second.z; ++k) {
-                        glm::ivec3 index = {i, j, k};
-                        grid[index] = f(index_to_grid_point(index));
-                    }
-                }
-            }
-            continue;
-        }
-        // if the cell does not contain a zero-crossing, skip the cell
-        glm::dvec3 cell_lower = index_to_grid_point(cell.first);
-        glm::dvec3 cell_upper = index_to_grid_point(cell.second);
-        double v = f((cell_upper + cell_lower) / 2.0);
-        if (abs(v) > 2 * glm::length(cell_upper - cell_lower) / 2.0) {
-            continue;
-        }
-        // if the cell contains a zero-crossing, subdivide it into 8 smaller cells
-        generate_children(grid_cells, cell);
-    }
+    SharedData data{grids, f, lower, upper, n};
+    Task root_task{{{0, 0, 0}, {n, n, n}}, &data};
+    root_task();
+
     auto end_t = std::chrono::high_resolution_clock::now();
 
     printf("Subdivision took: %d micro sec\n",
            (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
 
+    start_t = std::chrono::high_resolution_clock::now();
+
+    GridMap grid;
+    {
+        size_t counter = 0;
+        for(auto& local_grid : grids) {
+            counter += local_grid.size();
+        }
+        grid.reserve(counter);
+        for(const auto& local_grid : grids) {
+            for(const auto& element : local_grid) {
+                grid.insert_unique(element.first, element.second);
+            }
+        }
+        assert(counter == grid.size());
+    }
+
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Merging grids took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
 
     std::vector<int> edge_has_zero_crossing(grid.size() * 3, 0);
     std::vector<quadric> edge_quadrics(grid.size() * 3);
-    std::vector<std::array<int, 4>> edge_faces(grid.size() * 3);
 
     std::vector<std::pair<glm::ivec3, double>> grid_array(grid.size());
-    emhash7::HashMap<glm::ivec3, int, GridHash> grid_to_array;
-    grid_to_array.reserve(grid.size());
 
     start_t = std::chrono::high_resolution_clock::now();
     {
         int i = 0;
-        for (const auto &element: grid) {
-            grid_array[i] = {element.first, element.second};
-            grid_to_array[element.first] = i;
+        for (auto &element: grid) {
+            grid_array[i] = {element.first, element.second.value};
+            element.second.index = i;
             ++i;
         }
     }
     end_t = std::chrono::high_resolution_clock::now();
-    printf("Rehasing took %s micro sec\n",
+    printf("Generating grid_array took %s micro sec\n",
            std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count()).c_str());
 
     start_t = std::chrono::high_resolution_clock::now();
@@ -237,7 +280,7 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
             if (it == grid.end()) {
                 continue;
             }
-            double v2 = it->second;
+            double v2 = it->second.value;
             if (v1 * v2 <= 0) {
                 glm::dvec3 p2 = index_to_grid_point(index2);
                 std::pair p1v1 = {p1, v1};
@@ -289,8 +332,8 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
         for (auto e: all_edges) {
             glm::ivec3 start = index + e.first;
             glm::ivec3 end = index + e.second;
-            auto it = grid_to_array.find(start);
-            if (it == grid_to_array.end()) {
+            auto it = grid.find(start);
+            if (it == grid.end()) {
                 continue;
             }
             auto diff = end - start;
@@ -298,7 +341,7 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
             assert(diff[1] >= 0);
             assert(diff[2] >= 0);
             size_t k = diff[0] == 1 ? 0 : diff[1] == 1 ? 1 : 2;
-            size_t j = 3 * it->second + k;
+            size_t j = 3 * it->second.index + k;
             if (edge_has_zero_crossing[j]) {
                 vq += edge_quadrics[j];
                 ++counter;
@@ -313,7 +356,6 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
     end_t = std::chrono::high_resolution_clock::now();
     printf("Computing positions took: %d micro sec\n",
            (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
-
 
     int edge_indices[3][3] = {
             {0, 2, 1},
@@ -353,7 +395,7 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
 
             assert(voxel_has_point[i]);
 
-            double v1 = grid_array[grid_to_array[a0 + glm::ivec3(j == 0, j == 1, j == 2)]].second;
+            double v1 = grid_array[grid[a0 + glm::ivec3(j == 0, j == 1, j == 2)].index].second;
 
             // generate quad
             glm::ivec3 a1 = a0;
@@ -364,14 +406,14 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
             a3[idx1] -= 1;
             a3[idx2] -= 1;
 
-            auto it1 = grid_to_array.find(a1);
-            auto it2 = grid_to_array.find(a2);
-            auto it3 = grid_to_array.find(a3);
-            assert(it1 != grid_to_array.end());
-            assert(it2 != grid_to_array.end());
-            assert(it3 != grid_to_array.end());
-            std::array<int, 4> quad{vertex_map[i], vertex_map[it1->second], vertex_map[it3->second],
-                                    vertex_map[it2->second]};
+            auto it1 = grid.find(a1);
+            auto it2 = grid.find(a2);
+            auto it3 = grid.find(a3);
+            assert(it1 != grid.end());
+            assert(it2 != grid.end());
+            assert(it3 != grid.end());
+            std::array<int, 4> quad{vertex_map[i], vertex_map[it1->second.index], vertex_map[it3->second.index],
+                                    vertex_map[it2->second.index]};
             // there are 7 relevant cases:
             // v0 == 0 && v1 == 0 -> ambiguous, lets orient toward v0 for now
             // v0 == 0 && v1 < 0 -> orient toward v0
