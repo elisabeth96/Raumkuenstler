@@ -484,6 +484,73 @@ UnionNode::generate_instructions(std::vector<Instruction> &instructions, int &cu
     return {generate_min(instructions, current_register, v1[0], v2[0])};
 }
 
+void IntersectionNode::draw() {
+    ImGui::PushItemWidth(120);
+    ImNodes::BeginNode(m_node_id);
+
+    ImNodes::BeginNodeTitleBar();
+    ImGui::TextUnformatted("Intersection");
+    ImNodes::EndNodeTitleBar();
+
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
+    ImGui::Text("Implicit 1");
+    ImNodes::EndInputAttribute();
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    ImGui::Text("Implicit 2");
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
+    ImNodes::EndOutputAttribute();
+    ImNodes::EndNode();
+    ImGui::PopItemWidth();
+}
+
+std::vector<int>
+IntersectionNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                 std::map<int, double> &constants) {
+    Node *node_input1 = m_editor->find_node(m_node_id, 0);
+    Node *node_input2 = m_editor->find_node(m_node_id, 1);
+    std::vector<int> v1 = node_input1->generate_instructions(instructions, current_register, constants);
+    std::vector<int> v2 = node_input2->generate_instructions(instructions, current_register, constants);
+    return {generate_max(instructions, current_register, v1[0], v2[0])};
+}
+
+void SubtractionNode::draw() {
+    ImGui::PushItemWidth(120);
+    ImNodes::BeginNode(m_node_id);
+
+    ImNodes::BeginNodeTitleBar();
+    ImGui::TextUnformatted("Intersection");
+    ImNodes::EndNodeTitleBar();
+
+    ImGui::Dummy(ImVec2(120.0f, 0.0f));
+    assert(m_num_inputs == 2);
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 0));
+    ImGui::Text("Implicit 1");
+    ImNodes::EndInputAttribute();
+    ImNodes::BeginInputAttribute(m_editor->get_input_attribute_id(m_node_id, 1));
+    ImGui::Text("Implicit 2");
+    ImNodes::EndInputAttribute();
+
+    ImNodes::BeginOutputAttribute(m_editor->get_output_attribute_id(m_node_id));
+    ImNodes::EndOutputAttribute();
+    ImNodes::EndNode();
+    ImGui::PopItemWidth();
+}
+
+std::vector<int>
+SubtractionNode::generate_instructions(std::vector<Instruction> &instructions, int &current_register,
+                                        std::map<int, double> &constants) {
+    Node *node_input1 = m_editor->find_node(m_node_id, 0);
+    Node *node_input2 = m_editor->find_node(m_node_id, 1);
+    std::vector<int> v1 = node_input1->generate_instructions(instructions, current_register, constants);
+    std::vector<int> v2 = node_input2->generate_instructions(instructions, current_register, constants);
+    int v = generate_neg(instructions, current_register, v2[0]);
+    return {generate_max(instructions, current_register, v1[0], v)};
+}
+
 void SmoothUnionNode::draw() {
     ImGui::PushItemWidth(120);
     ImNodes::BeginNode(m_node_id);

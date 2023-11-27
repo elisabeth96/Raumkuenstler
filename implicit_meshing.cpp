@@ -9,6 +9,8 @@
 #include "third_party/probabilistic-quadrics.hh"
 #include "third_party/hash_table7.hpp"
 
+#include <tbb/parallel_for.h>
+
 using glm_trait = pq::math<double, glm::dvec3, glm::dvec3, glm::dmat3>;
 using quadric = pq::quadric<glm_trait>;
 
@@ -167,9 +169,11 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
     std::vector<GridCell> grid_cells;
     grid_cells.push_back({{0, 0, 0},
                           {n, n, n}});
+
     emhash7::HashMap<glm::ivec3, double, GridHash> grid;
 
     // subdivide cells that contain zero-crossings
+    auto start_t = std::chrono::high_resolution_clock::now();
     while (!grid_cells.empty()) {
         GridCell cell = grid_cells.back();
         grid_cells.pop_back();
@@ -190,54 +194,52 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
         glm::dvec3 cell_lower = index_to_grid_point(cell.first);
         glm::dvec3 cell_upper = index_to_grid_point(cell.second);
         double v = f((cell_upper + cell_lower) / 2.0);
-        if (abs(v) > 1.5 * glm::length(cell_upper - cell_lower) / 2.0) {
+        if (abs(v) > 2 * glm::length(cell_upper - cell_lower) / 2.0) {
             continue;
         }
         // if the cell contains a zero-crossing, subdivide it into 8 smaller cells
         generate_children(grid_cells, cell);
     }
+    auto end_t = std::chrono::high_resolution_clock::now();
 
-    std::vector<glm::dvec3> points;
-    std::vector<std::array<int, 4>> faces;
-    std::vector<Edge> edges = {{{1, 1, 0}, {1, 1, 1}, 2},
-                               {{1, 0, 1}, {1, 1, 1}, 1},
-                               {{0, 1, 1}, {1, 1, 1}, 0},};
-    std::vector<std::pair<glm::ivec3, glm::ivec3>> all_edges = {{{0, 0, 0}, {1, 0, 0}},
-                                                                {{0, 0, 0}, {0, 1, 0}},
-                                                                {{0, 0, 0}, {0, 0, 1}},
-                                                                {{1, 0, 0}, {1, 1, 0}},
-                                                                {{1, 0, 0}, {1, 0, 1}},
-                                                                {{0, 1, 0}, {1, 1, 0}},
-                                                                {{0, 1, 0}, {0, 1, 1}},
-                                                                {{0, 0, 1}, {1, 0, 1}},
-                                                                {{0, 0, 1}, {0, 1, 1}},
-                                                                {{1, 1, 0}, {1, 1, 1}},
-                                                                {{1, 0, 1}, {1, 1, 1}},
-                                                                {{0, 1, 1}, {1, 1, 1}},};
+    printf("Subdivision took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
 
-    std::vector<int> index_points(n * n * n, -1);
 
-    // generate vertex positions of the output mesh
-    // for each voxel we compute a point if at least one of its edges contains a zero-crossing
-    // the point is computed by minimizing a quadric error metric
-    for (const auto &element: grid) {
-        glm::ivec3 index = element.first;
-        quadric q;
-        int counter = 0;
-        for (auto e: all_edges) {
-            glm::ivec3 index_p1 = index + e.first;
-            glm::ivec3 index_p2 = index + e.second;
-            auto it1 = grid.find(index_p1);
-            auto it2 = grid.find(index_p2);
-            if (it1 == grid.end() || it2 == grid.end()) {
+    std::vector<int> edge_has_zero_crossing(grid.size() * 3, 0);
+    std::vector<quadric> edge_quadrics(grid.size() * 3);
+    std::vector<std::array<int, 4>> edge_faces(grid.size() * 3);
+
+    std::vector<std::pair<glm::ivec3, double>> grid_array(grid.size());
+    emhash7::HashMap<glm::ivec3, int, GridHash> grid_to_array;
+    grid_to_array.reserve(grid.size());
+
+    start_t = std::chrono::high_resolution_clock::now();
+    {
+        int i = 0;
+        for (const auto &element: grid) {
+            grid_array[i] = {element.first, element.second};
+            grid_to_array[element.first] = i;
+            ++i;
+        }
+    }
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Rehasing took %s micro sec\n",
+           std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count()).c_str());
+
+    start_t = std::chrono::high_resolution_clock::now();
+    tbb::parallel_for(size_t(0), grid_array.size(), [&](size_t i) {
+        auto [index1, v1] = grid_array[i];
+        glm::dvec3 p1 = index_to_grid_point(index1);
+        for (size_t j = 0; j < 3; ++j) {
+            glm::ivec3 index2 = index1 + glm::ivec3(j == 0, j == 1, j == 2);
+            auto it = grid.find(index2);
+            if (it == grid.end()) {
                 continue;
             }
-            double v1 = it1->second;
-            double v2 = it2->second;
+            double v2 = it->second;
             if (v1 * v2 <= 0) {
-                glm::dvec3 p1 = index_to_grid_point(index_p1);
-                glm::dvec3 p2 = index_to_grid_point(index_p2);
-
+                glm::dvec3 p2 = index_to_grid_point(index2);
                 std::pair p1v1 = {p1, v1};
                 std::pair p2v2 = {p2, v2};
 
@@ -245,64 +247,153 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
                     std::swap(p1v1, p2v2);
                 }
                 auto zero_crossing = find_point_on_surface(p1v1, p2v2, f, 5);
-
-                counter++;
-                q += quadric::probabilistic_plane_quadric(zero_crossing, glm::normalize(gradient_f(zero_crossing)),
-                                                          0.05, 0.05);
+                auto eq = quadric::probabilistic_plane_quadric(zero_crossing,
+                                                               glm::normalize(gradient_f(zero_crossing)),
+                                                               0.05, 0.05);
+                edge_quadrics[i * 3 + j] = eq;
+                edge_has_zero_crossing[i * 3 + j] = true;
             }
         }
-        if (counter != 0) {
-            points.push_back(q.minimizer());
-            index_points[index.x * n * n + index.y * n + index.z] = (int) points.size() - 1;
-        }
-    }
+    });
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Computing edge quadrics took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
 
-    // generate faces of the output mesh by connecting the corresponding points
-    for (const auto &element: grid) {
-        glm::ivec3 index = element.first;
-        int i = index.x;
-        int j = index.y;
-        int k = index.z;
-        int index_p = index_points[i * n * n + j * n + k];
-        if (index_p == -1) {
-            continue;
-        }
-        for (auto e: edges) {
-            glm::ivec3 index_p1 = index + e.a;
-            glm::ivec3 index_p2 = index + e.b;
-            auto it1 = grid.find(index_p1);
-            auto it2 = grid.find(index_p2);
-            if (it1 == grid.end() || it2 == grid.end()) {
+    // generate vertex positions of the output mesh
+    // for each voxel we compute a point if at least one of its edges contains a zero-crossing
+    // the point is computed by minimizing a quadric error metric
+    start_t = std::chrono::high_resolution_clock::now();
+
+    std::vector<glm::dvec3> voxel_point(grid.size());
+    std::vector<int> voxel_has_point(grid.size(), 0);
+
+    // all edges must point from smaller to larger
+    const std::vector<std::pair<glm::ivec3, glm::ivec3>> all_edges = {{{0, 0, 0}, {1, 0, 0}},
+                                                                      {{0, 0, 0}, {0, 1, 0}},
+                                                                      {{0, 0, 0}, {0, 0, 1}},
+                                                                      {{1, 0, 0}, {1, 1, 0}},
+                                                                      {{1, 0, 0}, {1, 0, 1}},
+                                                                      {{0, 1, 0}, {1, 1, 0}},
+                                                                      {{0, 1, 0}, {0, 1, 1}},
+                                                                      {{0, 0, 1}, {1, 0, 1}},
+                                                                      {{0, 0, 1}, {0, 1, 1}},
+                                                                      {{1, 1, 0}, {1, 1, 1}},
+                                                                      {{1, 0, 1}, {1, 1, 1}},
+                                                                      {{0, 1, 1}, {1, 1, 1}}};
+
+
+    tbb::parallel_for(size_t(0), grid_array.size(), [&](size_t i) {
+        glm::ivec3 index = grid_array[i].first;
+        size_t counter = 0;
+        quadric vq;
+        for (auto e: all_edges) {
+            glm::ivec3 start = index + e.first;
+            glm::ivec3 end = index + e.second;
+            auto it = grid_to_array.find(start);
+            if (it == grid_to_array.end()) {
                 continue;
             }
-            double v1 = it1->second;
-            double v2 = it2->second;
-            if (v1 * v2 <= 0) {
-                std::array<int, 4> face{};
-                if (e.idx == 0) {
-                    face[0] = index_p;
-                    face[1] = index_points[i * n * n + j * n + k + 1];
-                    face[2] = index_points[i * n * n + (j + 1) * n + k + 1];
-                    face[3] = index_points[i * n * n + (j + 1) * n + k];
-                }
-                if (e.idx == 1) {
-                    face[0] = index_p;
-                    face[1] = index_points[(i + 1) * n * n + j * n + k];
-                    face[2] = index_points[(i + 1) * n * n + j * n + k + 1];
-                    face[3] = index_points[i * n * n + j * n + k + 1];
-                }
-                if (e.idx == 2) {
-                    face[0] = index_p;
-                    face[1] = index_points[i * n * n + (j + 1) * n + k];
-                    face[2] = index_points[(i + 1) * n * n + (j + 1) * n + k];
-                    face[3] = index_points[(i + 1) * n * n + j * n + k];
-                }
-                if (v1 < 0) {
-                    std::reverse(face.begin(), face.end());
-                }
-                faces.push_back(face);
+            auto diff = end - start;
+            assert(diff[0] >= 0);
+            assert(diff[1] >= 0);
+            assert(diff[2] >= 0);
+            size_t k = diff[0] == 1 ? 0 : diff[1] == 1 ? 1 : 2;
+            size_t j = 3 * it->second + k;
+            if (edge_has_zero_crossing[j]) {
+                vq += edge_quadrics[j];
+                ++counter;
+            }
+        }
+        if (counter > 0) {
+            voxel_point[i] = vq.minimizer();
+            voxel_has_point[i] = true;
+        }
+    });
+
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Computing positions took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
+
+
+    int edge_indices[3][3] = {
+            {0, 2, 1},
+            {1, 0, 2},
+            {2, 1, 0}
+    };
+
+    start_t = std::chrono::high_resolution_clock::now();
+    std::vector<glm::dvec3> points;
+    std::vector<int> vertex_map(voxel_point.size(), -1);
+    {
+        int i = 0;
+        for (size_t j = 0; j < voxel_point.size(); ++j) {
+            if (voxel_has_point[j]) {
+                vertex_map[j] = i;
+                points.push_back(voxel_point[j]);
+                ++i;
             }
         }
     }
-    return {points, faces};
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Generating vertex map took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
+
+    std::vector<std::array<int, 4>> quads;
+
+    start_t = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < grid_array.size(); ++i) {
+        glm::ivec3 a0 = grid_array[i].first;
+        double v0 = grid_array[i].second;
+        // iterate over the three edges starting at grid_idx
+        for (auto [j, idx1, idx2]: edge_indices) {
+            // check if the edge has a zero crossing
+            if (!edge_has_zero_crossing[i * 3 + j]) {
+                continue;
+            }
+
+            assert(voxel_has_point[i]);
+
+            double v1 = grid_array[grid_to_array[a0 + glm::ivec3(j == 0, j == 1, j == 2)]].second;
+
+            // generate quad
+            glm::ivec3 a1 = a0;
+            a1[idx1] -= 1;
+            glm::ivec3 a2 = a0;
+            a2[idx2] -= 1;
+            glm::ivec3 a3 = a0;
+            a3[idx1] -= 1;
+            a3[idx2] -= 1;
+
+            auto it1 = grid_to_array.find(a1);
+            auto it2 = grid_to_array.find(a2);
+            auto it3 = grid_to_array.find(a3);
+            assert(it1 != grid_to_array.end());
+            assert(it2 != grid_to_array.end());
+            assert(it3 != grid_to_array.end());
+            std::array<int, 4> quad{vertex_map[i], vertex_map[it1->second], vertex_map[it3->second],
+                                    vertex_map[it2->second]};
+            // there are 7 relevant cases:
+            // v0 == 0 && v1 == 0 -> ambiguous, lets orient toward v0 for now
+            // v0 == 0 && v1 < 0 -> orient toward v0
+            // v1 == 0 && v0 > 0 -> orient toward v0
+            // v0 > 0 && v1 < 0 -> orient toward v0
+            // v0 == 0 && v1 > 0 -> orient toward v1
+            // v1 == 0 && v0 < 0 -> orient toward v1
+            // v1 > 0 && v0 < 0 -> orient toward v1
+            // by default the face is oriented towards v0
+            if (v0 == 0 && v1 > 0 || v1 == 0 && v0 < 0 || v1 > 0 && v0 < 0) {
+                std::reverse(quad.begin(), quad.end());
+            }
+            assert(quad[0] != -1);
+            assert(quad[1] != -1);
+            assert(quad[2] != -1);
+            assert(quad[3] != -1);
+            quads.push_back(quad);
+        }
+    }
+    end_t = std::chrono::high_resolution_clock::now();
+    printf("Generating quads took: %d micro sec\n",
+           (int) std::chrono::duration_cast<std::chrono::microseconds>(end_t - start_t).count());
+
+    return {std::move(points), std::move(quads)};
 }

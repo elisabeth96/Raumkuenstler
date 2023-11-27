@@ -80,6 +80,9 @@ std::function<double(glm::dvec3)> compile(std::vector<Instruction>& instructions
                 // Assuming sqrt function is available in your LLVM setup
                 result = builder.CreateCall(module->getOrInsertFunction("llvm.sqrt.f64", funcType), lhs, "sqrttmp");
                 break;
+            case Operation::Neg:
+                result = builder.CreateFNeg(lhs, "negtmp");
+                break;
             case Operation::Min:
                 // Implement Min operation
                 result = builder.CreateSelect(builder.CreateFCmpULT(lhs, rhs), lhs, rhs);
@@ -182,6 +185,12 @@ glm::ivec2 generate_sub (std::vector<Instruction>& instructions, int& current_re
 
 int generate_sub (std::vector<Instruction>& instructions, int& current_register, int v1, int v2) {
     Instruction i1 = {v1, v2, current_register++, Operation::Sub};
+    instructions.insert(instructions.end(), {i1});
+    return i1.output;
+}
+
+int generate_neg (std::vector<Instruction>& instructions, int& current_register, int v) {
+    Instruction i1 = {v, -1, current_register++, Operation::Neg};
     instructions.insert(instructions.end(), {i1});
     return i1.output;
 }
@@ -295,6 +304,8 @@ const char* return_op_name(Operation op){
             return "Mul";
         case Operation::Sqrt:
             return "Sqrt";
+        case Operation::Neg:
+            return "Neg";
         case Operation::Min:
             return "Min";
         case Operation::Max:

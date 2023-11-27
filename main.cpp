@@ -6,6 +6,8 @@
 #include <polyscope/surface_mesh.h>
 #include <polyscope/curve_network.h>
 
+#include <tbb/parallel_for.h>
+
 #include "third_party/imnodes.h"
 #include "implicit_meshing.h"
 #include "editor.h"
@@ -34,22 +36,28 @@ void callback() {
     if (editor.m_inputs[0][0].first == -1) {
         return;
     }
-    auto start = std::chrono::high_resolution_clock::now();
     std::vector<Instruction> instructions;
     std::map<int, double> constants;
     int current_register = 3;
     editor.m_nodes[0]->generate_instructions(instructions, current_register, constants);
     std::function<double(glm::dvec3)> f = compile(instructions, constants);
+    auto start = std::chrono::high_resolution_clock::now();
     auto mesh = mesh_generator(f, 200);
     editor.m_remesh = false;
     auto end = std::chrono::high_resolution_clock::now();
     // print time in ms
-    printf("Time taken: %d ms\n", (int) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    printf("Meshing took: %d microsec\n", (int) std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
     ps::registerSurfaceMesh("my mesh", mesh.vertices, mesh.quads);
 }
 
 
 int main() {
+    // warm up tbb
+    std::vector<int> vec(1000000, 2);
+    tbb::parallel_for(size_t(0), vec.size(), [&](size_t i) {
+        vec[i] *= 2;
+    });
+
     ps::options::buildGui = false;
     ps::options::groundPlaneMode = ps::GroundPlaneMode::ShadowOnly;
     ps::init();

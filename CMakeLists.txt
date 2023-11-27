@@ -16,6 +16,7 @@ if (APPLE)
     set(LLVM_DIR /opt/homebrew/opt/llvm/lib/cmake/llvm)
 endif ()
 find_package(LLVM REQUIRED CONFIG)
+find_package(TBB REQUIRED)
 
 add_executable(implicit_meshing
         main.cpp
@@ -45,6 +46,7 @@ target_link_libraries(implicit_meshing PRIVATE
         LLVMARMAsmParser
         LLVMAArch64CodeGen
         LLVMAArch64AsmParser
+        TBB::tbb
 )
 
 target_compile_options(implicit_meshing PRIVATE -march=native)

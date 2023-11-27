@@ -16,6 +16,7 @@ enum class Operation {
     Sub,
     Mul,
     Sqrt,
+    Neg,
     Min,
     Max,
     Abs,
@@ -45,6 +46,8 @@ glm::ivec3 generate_sub (std::vector<Instruction>& instructions, int& current_re
 glm::ivec2 generate_sub (std::vector<Instruction>& instructions, int& current_register, glm::ivec2 v1, glm::ivec2 v2);
 
 int generate_sub (std::vector<Instruction>& instructions, int& current_register, int v1, int v2);
+
+int generate_neg (std::vector<Instruction>& instructions, int& current_register, int v);
 
 int generate_add (std::vector<Instruction>& instructions, int& current_register, int v1, int v2);
 

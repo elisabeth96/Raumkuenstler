@@ -136,6 +136,26 @@ public:
     generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
 };
 
+class IntersectionNode : public Node {
+public:
+    IntersectionNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
+
+    void draw() override;
+
+    std::vector<int>
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+};
+
+class SubtractionNode : public Node {
+public:
+    SubtractionNode(Editor *editor, int node_id) : Node(editor, node_id, 2) {}
+
+    void draw() override;
+
+    std::vector<int>
+    generate_instructions(std::vector<Instruction> &instructions, int &current_register, std::map<int, double> &constants) override;
+};
+
 class SmoothUnionNode : public Node {
 public:
     float m_rounding = 0.05;

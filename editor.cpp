@@ -86,6 +86,14 @@ void Editor::draw_operator_dropdown() {
             selected_node = 1;
             add_node<SmoothUnionNode>();
         }
+        if (ImGui::Selectable("Intersection", selected_node == 2)) {
+            selected_node = 2;
+            add_node<IntersectionNode>();
+        }
+        if (ImGui::Selectable("Subtraction", selected_node == 3)) {
+            selected_node = 3;
+            add_node<SubtractionNode>();
+        }
         ImGui::EndCombo();
     }
     ImGui::PopItemWidth();
