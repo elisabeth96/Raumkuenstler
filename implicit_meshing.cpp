@@ -70,33 +70,38 @@ void generate_children(std::vector<GridCell> &grid_cells, const GridCell &curren
     }
 }
 
-glm::dvec3 interpolate(glm::dvec3 neg, glm::dvec3 pos, double val_neg, double val_pos) {
+glm::dvec3 interpolate(std::pair<glm::dvec3, double> neg, std::pair<glm::dvec3, double> pos) {
+    double val_neg = neg.second;
+    double val_pos = pos.second;
     assert(val_neg <= 0);
     assert(val_pos >= 0);
+    auto pt_neg = neg.first;
+    auto pt_pos = pos.first;
     double t = val_neg / (val_neg - val_pos);
-    glm::dvec3 p = neg + (pos - neg) * t;
+    glm::dvec3 p = pt_neg + (pt_pos - pt_neg) * t;
     return p;
 }
 
-glm::dvec3 find_point_on_surface(glm::dvec3 neg, glm::dvec3 pos, const std::function<double(glm::dvec3)> &f,
-                                int num_iterations) {
+glm::dvec3 find_point_on_surface(std::pair<glm::dvec3, double> neg, std::pair<glm::dvec3, double> pos,
+                                 const std::function<double(glm::dvec3)> &f,
+                                 int num_iterations) {
     assert(num_iterations > 0);
     const double threshold = 10e-5;
     for (int i = 0; i < num_iterations - 1; ++i) {
-        double val0 = f(neg);
-        double val1 = f(pos);
-        glm::dvec3 p = interpolate(neg, pos, val0, val1);
+        glm::dvec3 p = interpolate(neg, pos);
         double val = f(p);
-
         if (std::abs(val) < threshold) {
             return p;
         }
-
-        (val < 0) ? neg = p : pos = p;
+        if (val < 0) {
+            neg = {p, val};
+        } else {
+            pos = {p, val};
+        }
     }
 
     // Return the best approximation if the loop completes without finding the exact point
-    return interpolate(neg, pos, f(neg), f(pos));
+    return interpolate(neg, pos);
 }
 
 QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
@@ -233,11 +238,13 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
                 glm::dvec3 p1 = index_to_grid_point(index_p1);
                 glm::dvec3 p2 = index_to_grid_point(index_p2);
 
+                std::pair p1v1 = {p1, v1};
+                std::pair p2v2 = {p2, v2};
+
                 if (v1 > 0) {
-                    std::swap(p1, p2);
-                    std::swap(v1, v2);
+                    std::swap(p1v1, p2v2);
                 }
-                auto zero_crossing = find_point_on_surface(p1, p2, f, 5);
+                auto zero_crossing = find_point_on_surface(p1v1, p2v2, f, 5);
 
                 counter++;
                 q += quadric::probabilistic_plane_quadric(zero_crossing, glm::normalize(gradient_f(zero_crossing)),
