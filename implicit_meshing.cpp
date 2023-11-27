@@ -237,7 +237,7 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
                     std::swap(p1, p2);
                     std::swap(v1, v2);
                 }
-                auto zero_crossing = find_point_on_surface(p1, p2, f, 3);
+                auto zero_crossing = find_point_on_surface(p1, p2, f, 5);
 
                 counter++;
                 q += quadric::probabilistic_plane_quadric(zero_crossing, glm::normalize(gradient_f(zero_crossing)),
