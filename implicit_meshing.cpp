@@ -190,7 +190,6 @@ struct Task {
 
                     GridCell child_cell(child_min, child_max);
                     tg.run(Task{child_cell, data});
-                    //grid_cells.push_back(child_cell);
                 }
             }
         }
@@ -212,9 +211,9 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
 
     auto gradient_f = [=](glm::dvec3 p) -> glm::dvec3 {
         double eps = 10e-6;
-        double dx = (f({p.x + eps, p.y, p.z}) - f({p.x - eps, p.y, p.z})) / (2*eps);
-        double dy = (f({p.x, p.y + eps, p.z}) - f({p.x, p.y - eps, p.z})) / (2*eps);
-        double dz = (f({p.x, p.y, p.z + eps}) - f({p.x, p.y, p.z - eps})) / (2*eps);
+        double dx = (f({p.x + eps, p.y, p.z}) - f({p.x - eps, p.y, p.z})) / (2 * eps);
+        double dy = (f({p.x, p.y + eps, p.z}) - f({p.x, p.y - eps, p.z})) / (2 * eps);
+        double dz = (f({p.x, p.y, p.z + eps}) - f({p.x, p.y, p.z - eps})) / (2 * eps);
         return {dx, dy, dz};
     };
 
@@ -236,12 +235,12 @@ QuadMesh mesh_generator(std::function<double(glm::dvec3)> f, int n) {
     GridMap grid;
     {
         size_t counter = 0;
-        for(auto& local_grid : grids) {
+        for (auto &local_grid: grids) {
             counter += local_grid.size();
         }
         grid.reserve(counter);
-        for(const auto& local_grid : grids) {
-            for(const auto& element : local_grid) {
+        for (const auto &local_grid: grids) {
+            for (const auto &element: local_grid) {
                 grid.insert_unique(element.first, element.second);
             }
         }
