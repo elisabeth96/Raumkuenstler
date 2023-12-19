@@ -23,6 +23,10 @@ void callback() {
     editor.draw_operator_dropdown();
     ImGui::SameLine();
     editor.draw_math_dropdown();
+    // Draw delete button
+    ImGui::SameLine();
+    editor.draw_delete_button();
+
     // Draw the nodes and handle links
     editor.draw();
     editor.handle_links();

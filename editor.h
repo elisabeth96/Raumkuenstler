@@ -31,6 +31,9 @@ public:
     int m_current_input_id = 0;
     bool m_remesh = true;
 
+    // Map from link id to inputs
+    std::map<int, std::pair<int, int>> m_links;
+
     // Draw the nodes
     void draw();
 
@@ -42,6 +45,8 @@ public:
     void draw_operator_dropdown();
 
     void draw_math_dropdown();
+
+    void draw_delete_button();
 
     // Find a node in the m_nodes vector
     Node *find_node(int node_id, int input_id);
