@@ -31,7 +31,7 @@ void callback() {
     if (!editor.m_remesh) {
         return;
     }
-    if (editor.m_inputs[0][0].first == -1) {
+    if (editor.m_inputs[0][0].node_id == -1) {
         return;
     }
     auto start = std::chrono::high_resolution_clock::now();

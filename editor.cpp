@@ -21,11 +21,11 @@ void Editor::draw() {
     int counter = 0;
     for (int i = 0; i < m_inputs.size(); ++i) {
         for (int j = 0; j < m_inputs[i].size(); ++j) {
-            if (m_inputs[i][j].first == -1) {
+            if (m_inputs[i][j].node_id == -1) {
                 continue;
             }
-            ImNodes::Link(counter++, OUTPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].first,
-                          INPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].second);
+            ImNodes::Link(counter++, OUTPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].node_id,
+                          INPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].attribute_id);
         }
     }
     ImNodes::EndNodeEditor();
@@ -39,8 +39,8 @@ void Editor::handle_links() {
         }
         for (auto &input: m_inputs) {
             for (auto &link: input) {
-                if (link.second == end_attr - INPUT_ATTRIBUTE_OFFSET) {
-                    link.first = start_attr - OUTPUT_ATTRIBUTE_OFFSET;
+                if (link.attribute_id == end_attr - INPUT_ATTRIBUTE_OFFSET && link.type == m_nodes[start_attr - OUTPUT_ATTRIBUTE_OFFSET].get()->m_output_type) {
+                    link.node_id = start_attr - OUTPUT_ATTRIBUTE_OFFSET;
                     m_remesh = true;
                     return;
                 }
@@ -121,7 +121,7 @@ void Editor::draw_math_dropdown() {
 }
 
 Node *Editor::find_node(int node_id, int input_id) {
-    int input_node_id = m_inputs[node_id][input_id].first;
+    int input_node_id = m_inputs[node_id][input_id].node_id;
     if (input_node_id == -1) {
         return nullptr;
     }
@@ -137,12 +137,12 @@ void Editor::add_node() {
     }
     m_inputs.emplace_back();
     for (int i = 0; i < m_nodes.back()->m_num_inputs; ++i) {
-        m_inputs.back().emplace_back(-1, m_current_input_id++);
+        m_inputs.back().push_back({-1, m_current_input_id++, T::InputType[i]});
     }
 }
 
 int Editor::get_input_attribute_id(int node_id, int input_id) {
-    return INPUT_ATTRIBUTE_OFFSET + m_inputs[node_id][input_id].second;
+    return INPUT_ATTRIBUTE_OFFSET + m_inputs[node_id][input_id].attribute_id;
 }
 
 int Editor::get_output_attribute_id(int node_id) {
