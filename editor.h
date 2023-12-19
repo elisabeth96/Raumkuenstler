@@ -12,6 +12,12 @@
 constexpr int INPUT_ATTRIBUTE_OFFSET = 10e6;
 constexpr int OUTPUT_ATTRIBUTE_OFFSET = 20e6;
 
+struct InputSlot {
+    int node_id;
+    int attribute_id;
+    Type type;
+};
+
 class Editor {
 public:
     Editor();
@@ -20,8 +26,8 @@ public:
     std::vector<std::unique_ptr<Node>> m_nodes;
 
     // For each node, we store its inputs. Each input consists of the input node id (possibly -1 if
-    // there is no input link) and the input attribute id.
-    std::vector<std::vector<std::pair<int, int>>> m_inputs;
+    // there is no input link), the input attribute id and the input type (scalar or point).
+    std::vector<std::vector<InputSlot>> m_inputs;
     int m_current_input_id = 0;
     bool m_remesh = true;
 

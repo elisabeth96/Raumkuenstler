@@ -489,7 +489,7 @@ void SmoothUnionNode::draw() {
     ImNodes::BeginNode(m_node_id);
 
     ImNodes::BeginNodeTitleBar();
-    ImGui::TextUnformatted("Union");
+    ImGui::TextUnformatted("Smooth Union");
     ImNodes::EndNodeTitleBar();
 
     ImGui::Dummy(ImVec2(120.0f, 0.0f));
