@@ -15,15 +15,23 @@ void Editor::draw() {
     ImNodes::BeginNodeEditor();
     // draw all nodes that currenty exist
     for (auto &node: m_nodes) {
+        if (node == nullptr) {
+            continue;
+        }
         node->draw();
     }
     // check all possible link combinations and draw existing ones
+    m_links.clear();
     int counter = 0;
     for (int i = 0; i < m_inputs.size(); ++i) {
+        if (m_nodes[i] == nullptr) {
+            continue;
+        }
         for (int j = 0; j < m_inputs[i].size(); ++j) {
             if (m_inputs[i][j].node_id == -1) {
                 continue;
             }
+            m_links[counter] = {i, j};
             ImNodes::Link(counter++, OUTPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].node_id,
                           INPUT_ATTRIBUTE_OFFSET + m_inputs[i][j].attribute_id);
         }
@@ -118,6 +126,29 @@ void Editor::draw_math_dropdown() {
         ImGui::EndCombo();
     }
     ImGui::PopItemWidth();
+}
+
+void Editor::draw_delete_button() {
+    if (ImGui::Button("Delete")) {
+        std::vector<int> nodes (ImNodes::NumSelectedNodes());
+        ImNodes::GetSelectedNodes(nodes.data());
+        for (auto it : nodes){
+            for (auto& link : m_inputs){
+                for (auto& slot : link){
+                    if (slot.node_id == it){
+                        slot.node_id = -1;
+                    }
+                }
+            }
+            m_nodes[it] = nullptr;
+        }
+        std::vector<int> links (ImNodes::NumSelectedLinks());
+        ImNodes::GetSelectedLinks(links.data());
+        for (auto link_id : links){
+            auto index = m_links[link_id];
+            m_inputs[index.first][index.second].node_id = -1;
+        }
+    }
 }
 
 Node *Editor::find_node(int node_id, int input_id) {
