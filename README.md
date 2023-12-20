@@ -1,4 +1,5 @@
 # Raumkünstler
+[![CMake on a single platform](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml)
 
 Raumkünstler is a little side project I have been working on to tinker with implicit modelling. It's a playground for those who enjoy experimenting with shapes and forms through code.
 ![Smooth Union of a Box and a Torus. The box is animated.](Raumkuenstler.gif)
