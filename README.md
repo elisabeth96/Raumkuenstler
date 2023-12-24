@@ -1,36 +1,37 @@
 # Raumkünstler
-[![CMake on a single platform](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml)
+[![Linux](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml/badge.svg)](https://github.com/elisabeth96/Raumkuenstler/actions/workflows/cmake-single-platform.yml)
 
-Raumkünstler is a little side project I have been working on to tinker with implicit modelling. It's a playground for those who enjoy experimenting with shapes and forms through code.
+Raumkünstler is a little side project I have been working on to tinker with implicit modelling. It's a playground for exploring procedural modelling and fast implicit meshing.
 ![Smooth Union of a Box and a Torus. The box is animated.](Raumkuenstler.gif)
 
-### Key Features
+### Features
 
-- **Node-Based Modeling**: Play around with a visual scripting language where everything is node-based.
+- **Node-Based Modeling**: Design procedural geometry via a node-based visual scripting language.
 - **Implicit Modeling Approach**: Instead of an explicit boundary representation Raumkünstler describes shapes implicitly using formulas.
-- **LLVM-Powered JIT Compilation**: We use LLVM to turn our node graph into a native function for blazing fast performance.
-- **Fast Dual Contouring Implementation**: Raumkünstler implements a fast dual contouring implementation with empty space skipping and support for sharp features.
+- **LLVM-Powered JIT Compilation**: We use LLVM to turn the node graph into a native function for blazing fast performance.
+- **Fast Dual Contouring Implementation**: Raumkünstler uses a fast dual contouring implementation using empty space skipping and support for sharp features.
 
-## Getting Started
+## Building
 
-Setting up Raumkünstler is pretty straightforward. You just need LLVM on your system.
+Raumkünstler uses a standard cmake build. The only required dependancy which is not automatically fetched is LLVM. On Mac you can install LLVM via brew
+   ```bash
+   brew intall llvm
+   ```
+On Ubuntu it can installed via apt
+   ```bash
+   sudo apt-get install libllvm-dev
+   ```
+Once llvm is installed, you can grab that code
 
-### Prerequisites
-
-- Make sure LLVM is installed – it's crucial for the build process.
-
-### Installation
-
-1. Grab the code:
    ```bash
    git clone https://github.com/elisabeth96/Raumkuenstler.git
    ```
-2. Jump into the directory:
+Then setup an out of tree build
    ```bash
-   cd Raumkuenstler
+   cd Raumkuenstler && mkdir build && cd build
    ```
-3. Build it:
+and finally build via cmake/make
    ```bash
-   cmake -B build
-   cmake --build build
+   cmake .. -DCMAKE_BUILD_TYPE=Release
+   make- j
    ```
